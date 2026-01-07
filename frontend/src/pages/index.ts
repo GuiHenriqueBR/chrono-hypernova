@@ -1,0 +1,25 @@
+export { default as Dashboard } from "./Dashboard";
+export { default as Login } from "./Login";
+export { default as Clientes } from "./Clientes";
+export { default as ClienteDetalhes } from "./ClienteDetalhes";
+export { default as Apolices } from "./Apolices";
+export { default as ApoliceDetalhes } from "./ApoliceDetalhes";
+export { default as Sinistros } from "./Sinistros";
+export { default as SinistroDetalhes } from "./SinistroDetalhes";
+export { default as Cotacoes } from "./Cotacoes";
+export { default as CotacaoDetalhes } from "./CotacaoDetalhes";
+export { default as PropostaDetalhes } from "./PropostaDetalhes";
+export { default as Financeiro } from "./Financeiro";
+export { default as Agenda } from "./Agenda";
+export { default as Alertas } from "./Alertas";
+export { default as WhatsApp } from "./WhatsAppPage";
+export { default as WhatsAppCRM } from "./WhatsAppCRM";
+export { default as Importacao } from "./Importacao";
+export { default as Configuracoes } from "./Configuracoes";
+// Novos modulos separados
+export { default as Consorcios } from "./Consorcios";
+export { default as ConsorcioDetalhes } from "./ConsorcioDetalhes";
+export { default as PlanosSaude } from "./PlanosSaude";
+export { default as PlanoSaudeDetalhes } from "./PlanoSaudeDetalhes";
+export { default as Financiamentos } from "./Financiamentos";
+export { default as FinanciamentoDetalhes } from "./FinanciamentoDetalhes";

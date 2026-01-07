@@ -1,0 +1,41 @@
+src/hooks/useAlertas.ts(2,8): error TS2613: Module '"C:/Users/guizg/OneDrive/\u00C1rea de Trabalho/chrono-hypernova/frontend/src/services/api"' has no default export. Did you mean to use 'import { api } from "C:/Users/guizg/OneDrive/\u00C1rea de Trabalho/chrono-hypernova/frontend/src/services/api"' instead?
+src/hooks/useFormValidation.ts(40,27): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(schema: Zod3Type<T, FieldValues>, schemaOptions?: ParseParams | undefined, resolverOptions?: NonRawResolverOptions | undefined): Resolver<...>', gave the following error.
+    Argument of type 'ZodType<T, unknown, $ZodTypeInternals<T, unknown>>' is not assignable to parameter of type 'Zod3Type<T, FieldValues>'.
+      Types of property '_input' are incompatible.
+        Type 'unknown' is not assignable to type 'FieldValues'.
+  Overload 2 of 4, '(schema: $ZodType<unknown, FieldValues, $ZodTypeInternals<unknown, FieldValues>>, schemaOptions?: ParseContext<$ZodIssue> | undefined, resolverOptions?: NonRawResolverOptions | undefined): Resolver<...>', gave the following error.
+    Argument of type 'ZodType<T, unknown, $ZodTypeInternals<T, unknown>>' is not assignable to parameter of type '$ZodType<unknown, FieldValues, $ZodTypeInternals<unknown, FieldValues>>'.
+      Types of property '_zod' are incompatible.
+        Type '$ZodTypeInternals<T, unknown>' is not assignable to type '$ZodTypeInternals<unknown, FieldValues>'.
+          Type 'unknown' is not assignable to type 'FieldValues'.
+src/hooks/useSinistroChecklist.ts(2,8): error TS2613: Module '"C:/Users/guizg/OneDrive/\u00C1rea de Trabalho/chrono-hypernova/frontend/src/services/api"' has no default export. Did you mean to use 'import { api } from "C:/Users/guizg/OneDrive/\u00C1rea de Trabalho/chrono-hypernova/frontend/src/services/api"' instead?
+src/pages/Agenda.tsx(134,18): error TS2345: Argument of type '{ status?: "concluidas" | "pendentes" | undefined; prioridade?: string | undefined; } | undefined' is not assignable to parameter of type 'TarefasFilters | undefined'.
+  Type '{ status?: "concluidas" | "pendentes" | undefined; prioridade?: string | undefined; }' is not assignable to type 'TarefasFilters'.
+    Types of property 'prioridade' are incompatible.
+      Type 'string | undefined' is not assignable to type 'PrioridadeTarefa | undefined'.
+        Type 'string' is not assignable to type 'PrioridadeTarefa | undefined'.
+src/pages/Alertas.tsx(318,16): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ReactNode'.
+src/pages/ApoliceDetalhes.tsx(585,35): error TS18048: 'endosso.diferenca_premio' is possibly 'undefined'.
+src/pages/ApoliceDetalhes.tsx(590,34): error TS18048: 'endosso.diferenca_premio' is possibly 'undefined'.
+src/pages/ApoliceDetalhes.tsx(591,49): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/pages/ApoliceDetalhes.tsx(635,26): error TS2367: This comparison appears to be unintentional because the types '"pendente" | "cancelado" | "aprovado" | "rejeitado"' and '"rascunho"' have no overlap.
+src/pages/Apolices.tsx(50,3): error TS2353: Object literal may only specify known properties, and 'saude' does not exist in type 'Record<RamoSeguro, { icon: ElementType<any, keyof IntrinsicElements>; color: string; label: string; }>'.
+src/pages/CotacaoDetalhes.tsx(135,42): error TS2345: Argument of type 'CotacaoForm' is not assignable to parameter of type 'Partial<Cotacao>'.
+  Types of property 'ramo' are incompatible.
+    Type 'string' is not assignable to type 'RamoSeguro | undefined'.
+src/pages/CotacaoDetalhes.tsx(143,53): error TS2322: Type 'CotacaoForm' is not assignable to type 'Partial<Cotacao>'.
+  Types of property 'ramo' are incompatible.
+    Type 'string' is not assignable to type 'RamoSeguro | undefined'.
+src/pages/CotacaoDetalhes.tsx(256,23): error TS2322: Type '{ options: { value: string; label: string; }[]; placeholder: string; error: string | undefined; onChange: (...event: any[]) => void; onBlur: Noop; value: string; disabled?: boolean | undefined; name: "cliente_id"; ref: RefCallBack; }' is not assignable to type 'IntrinsicAttributes & SelectProps & RefAttributes<HTMLSelectElement>'.
+  Property 'placeholder' does not exist on type 'IntrinsicAttributes & SelectProps & RefAttributes<HTMLSelectElement>'.
+src/pages/Cotacoes.tsx(260,34): error TS2339: Property 'data' does not exist on type '{}'.
+src/pages/Cotacoes.tsx(261,36): error TS2339: Property 'data' does not exist on type '{}'.
+src/pages/Dashboard.tsx(466,23): error TS2322: Type 'ChartDataItem[]' is not assignable to type 'DonutChartData[]'.
+  Type 'ChartDataItem' is not assignable to type 'DonutChartData'.
+    Types of property 'color' are incompatible.
+      Type 'string | undefined' is not assignable to type 'string'.
+        Type 'undefined' is not assignable to type 'string'.
+src/pages/FinanciamentoDetalhes.tsx(142,67): error TS2551: Property 'valor_amortizacao' does not exist on type 'FinanciamentoAmortizacao'. Did you mean 'valor_amortizado'?
+src/pages/FinanciamentoDetalhes.tsx(588,59): error TS2551: Property 'valor_amortizacao' does not exist on type 'FinanciamentoAmortizacao'. Did you mean 'valor_amortizado'?
