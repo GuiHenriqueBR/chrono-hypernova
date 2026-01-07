@@ -3,9 +3,6 @@ builder = "nixpacks"
 
 [[services]]
 name = "backend"
-root = "backend"
-buildCommand = "npm run build"
-startCommand = "npm start"
 [services.env]
 PORT = "3000"
 
