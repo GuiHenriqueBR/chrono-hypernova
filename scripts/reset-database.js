@@ -1,7 +1,14 @@
+require("dotenv").config();
 const { Client } = require("pg");
 
-const connectionString =
-  "postgresql://postgres:Gui23042002Fl1@db.ldstsbsgbnoxjsembkws.supabase.co:5432/postgres";
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  console.error(
+    "❌ DATABASE_URL não definida. Defina via variável de ambiente antes de rodar."
+  );
+  process.exit(1);
+}
 
 async function resetDatabase() {
   const client = new Client({

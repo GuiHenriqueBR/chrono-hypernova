@@ -1184,3 +1184,5 @@
 2026-01-07 10:50:05:505 [32minfo[39m: [32mGET /api/services[39m
 2026-01-07 11:18:03:183 [32minfo[39m: [32mPOST /api/auth/login[39m
 2026-01-07 11:18:04:184 [31merror[39m: [31mErro no login: Invalid login credentials[39m
+2026-01-07 14:00:01:01 [32minfo[39m: [32m[CRON] Executando verificacao de alertas - 14:00[39m
+2026-01-07 14:00:01:01 [32minfo[39m: [32mIniciando verificacoes de alertas...[39m

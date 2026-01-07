@@ -1,0 +1,16 @@
+[phases.setup]
+nixPkgs = ["nodejs_22", "npm-9_x"]
+
+[phases.install]
+cmds = ["cd backend && npm ci"]
+[phases.install.env]
+# Move npm cache away from /app/node_modules/.cache to avoid EBUSY on cleanup
+NPM_CONFIG_CACHE = "/tmp/npm-cache"
+
+[phases.build]
+cmds = ["cd backend && npm run build"]
+[phases.build.env]
+NPM_CONFIG_CACHE = "/tmp/npm-cache"
+
+[start]
+cmd = "cd backend && npm start"

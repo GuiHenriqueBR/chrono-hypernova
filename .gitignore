@@ -1,1 +1,12 @@
 .vercel
+# Environment files (do not commit secrets)
+.env
+.env.*
+frontend/.env*
+backend/.env
+apps/backend/.env
+apps/frontend/.env*
+# Node modules and logs
+node_modules
+npm-debug.log*
+yarn-error.log*
