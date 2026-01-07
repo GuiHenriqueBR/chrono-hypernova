@@ -1,13 +1,13 @@
+# Backend deployment config (Railway uses rootDirectory = "backend")
 [phases.setup]
 nixPkgs = ["nodejs_22", "npm-9_x"]
 
 [phases.install]
-cmds = ["cd backend && npm ci --cache /tmp/npm-cache"]
+cmds = ["npm ci --cache /tmp/npm-cache"]
 
 [phases.build]
-cmds = ["cd backend && npm run build"]
-# Disable default caching that causes EBUSY
+cmds = ["npm run build"]
 cacheDirectories = []
 
 [start]
-cmd = "cd backend && npm start"
+cmd = "npm start"

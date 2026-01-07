@@ -1,14 +1,16 @@
 [build]
 builder = "nixpacks"
+watchPatterns = ["backend/**"]
 
 [[services]]
 name = "backend"
+rootDirectory = "backend"
 [services.env]
 PORT = "3000"
 
 [[services]]
 name = "evolution-api"
-root = "services/evolution-api"
+rootDirectory = "services/evolution-api"
 source = "Dockerfile"
 [services.env]
 SERVER_PORT = "8080"
