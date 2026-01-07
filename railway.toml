@@ -4,13 +4,13 @@ watchPatterns = ["backend/**"]
 
 [[services]]
 name = "backend"
-rootDirectory = "backend"
+root = "backend"
 [services.env]
 PORT = "3000"
 
 [[services]]
 name = "evolution-api"
-rootDirectory = "services/evolution-api"
+root = "services/evolution-api"
 source = "Dockerfile"
 [services.env]
 SERVER_PORT = "8080"
