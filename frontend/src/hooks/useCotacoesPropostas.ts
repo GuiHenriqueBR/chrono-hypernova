@@ -95,16 +95,19 @@ export function useUpdateCotacaoStatus() {
       status_pipeline,
       motivo_perda,
       notas,
+      dados_cliente,
     }: {
       id: string;
       status_pipeline: StatusPipelineCotacao;
       motivo_perda?: string;
       notas?: string;
+      dados_cliente?: any;
     }) =>
       api.patch(`/cotacoes/${id}/status`, {
         status_pipeline,
         motivo_perda,
         notas,
+        dados_cliente,
       }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["cotacoes"] });

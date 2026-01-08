@@ -110,11 +110,11 @@ export function useAtualizarItemChecklist() {
         data_recebimento?: string;
       };
     }) => {
-      const { data } = await api.patch<any>(
+      const response = await api.patch<ChecklistItem>(
         `/sinistros/${sinistroId}/checklist/${itemId}`,
         dados
       );
-      return data as ChecklistItem;
+      return response;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
@@ -138,14 +138,14 @@ export function useAdicionarItemChecklist() {
       nome_documento: string;
       obrigatorio?: boolean;
     }) => {
-      const { data } = await api.post<any>(
+      const response = await api.post<ChecklistItem>(
         `/sinistros/${sinistroId}/checklist`,
         {
           nome_documento,
           obrigatorio,
         }
       );
-      return data as ChecklistItem;
+      return response;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
@@ -191,13 +191,13 @@ export function useVincularDocumentoChecklist() {
       itemId: string;
       documentoId: string;
     }) => {
-      const { data } = await api.post<any>(
+      const response = await api.post<ChecklistItem>(
         `/sinistros/${sinistroId}/checklist/${itemId}/vincular`,
         {
           documento_id: documentoId,
         }
       );
-      return data;
+      return response;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
@@ -213,11 +213,11 @@ export function useResetarChecklist() {
 
   return useMutation({
     mutationFn: async (sinistroId: string) => {
-      const { data } = await api.post<any>(
+      const response = await api.post<ChecklistSinistro>(
         `/sinistros/${sinistroId}/checklist/resetar`,
         {}
       );
-      return data;
+      return response;
     },
     onSuccess: (_, sinistroId) => {
       queryClient.invalidateQueries({

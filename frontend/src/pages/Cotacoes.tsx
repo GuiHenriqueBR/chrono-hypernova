@@ -41,7 +41,7 @@ import {
   usePipelineFases, // Importante
 } from "../hooks/useCotacoesPropostas";
 import { usePipelineVendas } from "../hooks/useDashboard";
-import { PipelineCotacao, StatusPipelineCotacao } from "../types";
+import { PipelineCotacao, StatusPipelineCotacao, Proposta } from "../types";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -127,6 +127,13 @@ function FollowUpModal({
   );
 }
 
+interface ClientData {
+  nome: string;
+  cpf_cnpj: string;
+  email: string;
+  telefone: string;
+}
+
 // Modal de Mudança de Status
 function StatusChangeModal({
   isOpen,
@@ -139,12 +146,21 @@ function StatusChangeModal({
   onClose: () => void;
   cotacao: PipelineCotacao | null;
   targetStatus: StatusPipelineCotacao | null;
-  onConfirm: (motivo?: string, notas?: string) => void;
+  onConfirm: (motivo?: string, notas?: string, clientData?: ClientData) => void;
 }) {
   const [motivo, setMotivo] = useState("");
   const [notas, setNotas] = useState("");
 
+  // Client Data State
+  const [clientData, setClientData] = useState<ClientData>({
+    nome: cotacao?.cliente || "",
+    cpf_cnpj: "",
+    email: "",
+    telefone: cotacao?.telefone || "",
+  });
+
   const isLoss = targetStatus === "fechada_perdida";
+  const isWon = targetStatus === "fechada_ganha";
   const statusLabel =
     PIPELINE_COLUMNS.find((c) => c.key === targetStatus)?.label || targetStatus;
 
@@ -152,10 +168,16 @@ function StatusChangeModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isLoss ? "Registrar Perda" : `Mover para ${statusLabel}`}
-      size="sm"
+      title={
+        isLoss
+          ? "Registrar Perda"
+          : isWon
+            ? "Fechar Negócio & Cliente"
+            : `Mover para ${statusLabel}`
+      }
+      size="md"
     >
-      <div className="space-y-4">
+      <div className="space-y-4 max-h-[60vh] overflow-y-auto px-1">
         <div>
           <p className="text-sm text-slate-600 mb-3">
             Movendo cotação de <strong>{cotacao?.cliente}</strong>
@@ -183,6 +205,71 @@ function StatusChangeModal({
           </div>
         )}
 
+        {isWon && (
+          <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-3">
+            <h4 className="text-sm font-semibold text-emerald-800 flex items-center gap-2">
+              <CheckCircle className="w-4 h-4" />
+              Dados para Cadastro do Cliente
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-emerald-700 mb-1">
+                  Nome Completo
+                </label>
+                <Input
+                  value={clientData.nome}
+                  onChange={(e) =>
+                    setClientData({ ...clientData, nome: e.target.value })
+                  }
+                  className="bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-emerald-700 mb-1">
+                  CPF/CNPJ
+                </label>
+                <Input
+                  value={clientData.cpf_cnpj}
+                  onChange={(e) =>
+                    setClientData({ ...clientData, cpf_cnpj: e.target.value })
+                  }
+                  placeholder="000.000.000-00"
+                  className="bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-emerald-700 mb-1">
+                  Email
+                </label>
+                <Input
+                  value={clientData.email}
+                  onChange={(e) =>
+                    setClientData({ ...clientData, email: e.target.value })
+                  }
+                  className="bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-emerald-700 mb-1">
+                  Telefone
+                </label>
+                <Input
+                  value={clientData.telefone}
+                  onChange={(e) =>
+                    setClientData({ ...clientData, telefone: e.target.value })
+                  }
+                  className="bg-white"
+                />
+              </div>
+            </div>
+            <p className="text-[10px] text-emerald-600">
+              * O cliente será ativado automaticamente e estes dados serão
+              salvos.
+            </p>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
             Observações {!isLoss && "(opcional)"}
@@ -201,7 +288,9 @@ function StatusChangeModal({
           Cancelar
         </Button>
         <Button
-          onClick={() => onConfirm(motivo, notas)}
+          onClick={() =>
+            onConfirm(motivo, notas, isWon ? clientData : undefined)
+          }
           disabled={isLoss && !motivo}
           variant={isLoss ? "danger" : "primary"}
         >
@@ -217,7 +306,12 @@ function PipelineMetrics({
   metricas,
   isLoading,
 }: {
-  metricas: any;
+  metricas?: {
+    emAndamento: number;
+    taxaConversao: number;
+    ganhas: number;
+    valorPipelineAtivo: number;
+  };
   isLoading: boolean;
 }) {
   if (isLoading) {
@@ -344,7 +438,7 @@ export default function Cotacoes() {
   ) => {
     const item = Object.values(pipelineData?.pipeline || {})
       .flat()
-      .find((c: any) => c.id === itemId) as PipelineCotacao;
+      .find((c: PipelineCotacao) => c.id === itemId) as PipelineCotacao;
 
     if (newStatus === "fechada_perdida" || newStatus === "fechada_ganha") {
       setStatusModal({ open: true, cotacao: item, targetStatus: newStatus });
@@ -369,7 +463,11 @@ export default function Cotacoes() {
     }
   };
 
-  const handleStatusConfirm = (motivo?: string, notas?: string) => {
+  const handleStatusConfirm = (
+    motivo?: string,
+    notas?: string,
+    clientData?: ClientData
+  ) => {
     if (statusModal.cotacao && statusModal.targetStatus) {
       updateStatus.mutate(
         {
@@ -377,6 +475,7 @@ export default function Cotacoes() {
           status_pipeline: statusModal.targetStatus,
           motivo_perda: motivo,
           notas,
+          dados_cliente: clientData,
         },
         {
           onSuccess: () => {
@@ -626,7 +725,7 @@ export default function Cotacoes() {
                 />
               </div>
             ) : (
-              propostas.map((proposta: any) => (
+              propostas.map((proposta: Proposta) => (
                 <motion.div key={proposta.id} variants={itemVariants}>
                   <Card
                     className="hover:border-violet-200 cursor-pointer transition-colors relative"
@@ -638,10 +737,10 @@ export default function Cotacoes() {
                           proposta.status === "aceita"
                             ? "success"
                             : proposta.status === "recusada"
-                            ? "error"
-                            : proposta.status === "enviada"
-                            ? "info"
-                            : "neutral"
+                              ? "error"
+                              : proposta.status === "enviada"
+                                ? "info"
+                                : "neutral"
                         }
                       >
                         {proposta.status.toUpperCase()}
@@ -717,6 +816,7 @@ export default function Cotacoes() {
       />
 
       <StatusChangeModal
+        key={statusModal.cotacao?.id || "modal"}
         isOpen={statusModal.open}
         onClose={() =>
           setStatusModal({ open: false, cotacao: null, targetStatus: null })

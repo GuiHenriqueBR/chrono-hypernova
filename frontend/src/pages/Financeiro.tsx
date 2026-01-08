@@ -3,8 +3,6 @@ import { motion } from "framer-motion";
 import {
   DollarSign,
   TrendingUp,
-  TrendingDown,
-  Wallet,
   ArrowUpRight,
   ArrowDownRight,
   Search,
@@ -17,30 +15,28 @@ import {
   BarChart3,
   Calendar,
   Download,
-  Filter,
   RefreshCw,
   Target,
-  Eye,
   ChevronRight,
 } from "lucide-react";
 import { PageLayout } from "../components/layout";
-import { 
-  Card, 
-  Button, 
-  Modal, 
-  ModalFooter, 
-  Input, 
-  Skeleton, 
+import {
+  Card,
+  Button,
+  Modal,
+  ModalFooter,
+  Input,
+  Skeleton,
   EmptyState,
   LineChart,
   BarChart,
   DonutChart,
 } from "../components/common";
-import { 
-  useFinanceiroStats, 
-  useComissoes, 
-  useCreateComissao, 
-  useDeleteComissao, 
+import {
+  useFinanceiroStats,
+  useComissoes,
+  useCreateComissao,
+  useDeleteComissao,
   useMarcarComissaoRecebida,
   useFinanceiroCharts,
   useExportarComissoes,
@@ -68,43 +64,57 @@ interface FormData {
   valor_bruto: string;
   valor_liquido: string;
   data_receita: string;
-  status: 'pendente' | 'recebida';
+  status: "pendente" | "recebida";
 }
 
 const initialFormData: FormData = {
-  apolice_id: '',
-  valor_bruto: '',
-  valor_liquido: '',
-  data_receita: '',
-  status: 'pendente',
+  apolice_id: "",
+  valor_bruto: "",
+  valor_liquido: "",
+  data_receita: "",
+  status: "pendente",
 };
 
 const periodos: { value: PeriodoFiltro; label: string }[] = [
-  { value: 'mes', label: 'Este Mes' },
-  { value: 'trimestre', label: 'Trimestre' },
-  { value: 'ano', label: 'Este Ano' },
-  { value: 'todos', label: '12 Meses' },
+  { value: "mes", label: "Este Mes" },
+  { value: "trimestre", label: "Trimestre" },
+  { value: "ano", label: "Este Ano" },
+  { value: "todos", label: "12 Meses" },
 ];
 
 export default function Financeiro() {
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>('todos');
-  const [periodoFiltro, setPeriodoFiltro] = useState<PeriodoFiltro>('ano');
+  const [filterStatus, setFilterStatus] = useState<string>("todos");
+  const [periodoFiltro, setPeriodoFiltro] = useState<PeriodoFiltro>("ano");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [comissaoToDelete, setComissaoToDelete] = useState<Comissao | null>(null);
+  const [comissaoToDelete, setComissaoToDelete] = useState<Comissao | null>(
+    null
+  );
   const [formData, setFormData] = useState<FormData>(initialFormData);
-  const [formErrors, setFormErrors] = useState<Partial<Record<keyof FormData, string>>>({});
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'lista' | 'projecao'>('dashboard');
+  const [formErrors, setFormErrors] = useState<
+    Partial<Record<keyof FormData, string>>
+  >({});
+  const [activeTab, setActiveTab] = useState<
+    "dashboard" | "lista" | "projecao"
+  >("dashboard");
   const [projecaoMeses, setProjecaoMeses] = useState(6);
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
 
   // API hooks
   const { data: stats, isLoading: statsLoading } = useFinanceiroStats();
-  const { data: charts, isLoading: chartsLoading } = useFinanceiroCharts(periodoFiltro);
-  const { data: projecaoData, isLoading: projecaoLoading } = useProjecaoFluxoCaixa(projecaoMeses);
-  const { data: comissoesData, isLoading, error } = useComissoes(
-    filterStatus !== 'todos' ? { status: filterStatus as StatusComissao } : undefined
+  const { data: charts, isLoading: chartsLoading } =
+    useFinanceiroCharts(periodoFiltro);
+  const { data: projecaoData, isLoading: projecaoLoading } =
+    useProjecaoFluxoCaixa(projecaoMeses);
+  const {
+    data: comissoesData,
+    isLoading,
+    error,
+  } = useComissoes(
+    filterStatus !== "todos"
+      ? { status: filterStatus as StatusComissao }
+      : undefined
   );
   const { data: apolicesData } = useApolices();
   const createComissao = useCreateComissao();
@@ -113,15 +123,19 @@ export default function Financeiro() {
   const exportarComissoes = useExportarComissoes();
 
   // Filter comissoes by search
-  const comissoesList = useMemo(() => comissoesData?.data || [], [comissoesData?.data]);
+  const comissoesList = useMemo(
+    () => comissoesData?.data || [],
+    [comissoesData?.data]
+  );
   const filtered = useMemo(() => {
     if (!comissoesList.length) return [];
     if (!search) return comissoesList;
-    
+
     const searchLower = search.toLowerCase();
-    return comissoesList.filter((c: Comissao) =>
-      c.apolice?.numero_apolice?.toLowerCase().includes(searchLower) ||
-      c.apolice?.cliente?.nome?.toLowerCase().includes(searchLower)
+    return comissoesList.filter(
+      (c: Comissao) =>
+        c.apolice?.numero_apolice?.toLowerCase().includes(searchLower) ||
+        c.apolice?.cliente?.nome?.toLowerCase().includes(searchLower)
     );
   }, [comissoesList, search]);
 
@@ -143,17 +157,18 @@ export default function Financeiro() {
 
   // Handle form change
   const handleFormChange = (field: keyof FormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setFormErrors(prev => ({ ...prev, [field]: undefined }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormErrors((prev) => ({ ...prev, [field]: undefined }));
 
     // Auto-calcular valor liquido (85% do bruto por padrao)
-    if (field === 'valor_bruto') {
-      const bruto = parseFloat(value.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+    if (field === "valor_bruto") {
+      const bruto =
+        parseFloat(value.replace(/[^\d.,]/g, "").replace(",", ".")) || 0;
       const liquido = bruto * 0.85;
-      setFormData(prev => ({ 
-        ...prev, 
+      setFormData((prev) => ({
+        ...prev,
         [field]: value,
-        valor_liquido: liquido.toFixed(2)
+        valor_liquido: liquido.toFixed(2),
       }));
     }
   };
@@ -161,20 +176,20 @@ export default function Financeiro() {
   // Validate form
   const validateForm = (): boolean => {
     const errors: Partial<Record<keyof FormData, string>> = {};
-    
+
     if (!formData.apolice_id) {
-      errors.apolice_id = 'Selecione uma apolice';
+      errors.apolice_id = "Selecione uma apolice";
     }
     if (!formData.valor_bruto || parseFloat(formData.valor_bruto) <= 0) {
-      errors.valor_bruto = 'Valor bruto e obrigatorio';
+      errors.valor_bruto = "Valor bruto e obrigatorio";
     }
     if (!formData.valor_liquido || parseFloat(formData.valor_liquido) <= 0) {
-      errors.valor_liquido = 'Valor liquido e obrigatorio';
+      errors.valor_liquido = "Valor liquido e obrigatorio";
     }
     if (!formData.data_receita) {
-      errors.data_receita = 'Data e obrigatoria';
+      errors.data_receita = "Data e obrigatoria";
     }
-    
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -182,7 +197,7 @@ export default function Financeiro() {
   // Handle submit
   const handleSubmit = async () => {
     if (!validateForm()) return;
-    
+
     try {
       await createComissao.mutateAsync({
         apolice_id: formData.apolice_id,
@@ -191,12 +206,13 @@ export default function Financeiro() {
         data_receita: formData.data_receita,
         status: formData.status,
       });
-      
+
       setIsModalOpen(false);
       setFormData(initialFormData);
       setFormErrors({});
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao criar comissao';
+      const errorMessage =
+        err instanceof Error ? err.message : "Erro ao criar comissao";
       setFormErrors({ apolice_id: errorMessage });
     }
   };
@@ -204,13 +220,13 @@ export default function Financeiro() {
   // Handle delete
   const handleDelete = async () => {
     if (!comissaoToDelete) return;
-    
+
     try {
       await deleteComissao.mutateAsync(comissaoToDelete.id);
       setDeleteModalOpen(false);
       setComissaoToDelete(null);
     } catch (err) {
-      console.error('Erro ao excluir comissao:', err);
+      console.error("Erro ao excluir comissao:", err);
     }
   };
 
@@ -219,7 +235,7 @@ export default function Financeiro() {
     try {
       await marcarRecebida.mutateAsync(id);
     } catch (err) {
-      console.error('Erro ao marcar comissao como recebida:', err);
+      console.error("Erro ao marcar comissao como recebida:", err);
     }
   };
 
@@ -228,18 +244,22 @@ export default function Financeiro() {
 
   // Prepare chart data
   const lineChartData = useMemo(() => {
-    return charts?.comissoesMensais?.map(item => ({
-      label: item.label,
-      value: item.total,
-    })) || [];
+    return (
+      charts?.comissoesMensais?.map((item) => ({
+        label: item.label,
+        value: item.total,
+      })) || []
+    );
   }, [charts]);
 
   const barChartData = useMemo(() => {
-    return charts?.comissoesMensais?.map(item => ({
-      label: item.label,
-      value: item.recebido,
-      color: '#10b981',
-    })) || [];
+    return (
+      charts?.comissoesMensais?.map((item) => ({
+        label: item.label,
+        value: item.recebido,
+        color: "#10b981",
+      })) || []
+    );
   }, [charts]);
 
   return (
@@ -251,14 +271,17 @@ export default function Financeiro() {
         className="space-y-6"
       >
         {/* Tabs + Period Filter */}
-        <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <motion.div
+          variants={itemVariants}
+          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+        >
           <div className="flex bg-white rounded-xl p-1 border border-slate-200">
             <button
-              onClick={() => setActiveTab('dashboard')}
+              onClick={() => setActiveTab("dashboard")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === 'dashboard'
-                  ? 'bg-violet-500 text-white'
-                  : 'text-slate-600 hover:bg-slate-50'
+                activeTab === "dashboard"
+                  ? "bg-violet-500 text-white"
+                  : "text-slate-600 hover:bg-slate-50"
               }`}
             >
               <span className="flex items-center gap-2">
@@ -267,11 +290,11 @@ export default function Financeiro() {
               </span>
             </button>
             <button
-              onClick={() => setActiveTab('lista')}
+              onClick={() => setActiveTab("lista")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === 'lista'
-                  ? 'bg-violet-500 text-white'
-                  : 'text-slate-600 hover:bg-slate-50'
+                activeTab === "lista"
+                  ? "bg-violet-500 text-white"
+                  : "text-slate-600 hover:bg-slate-50"
               }`}
             >
               <span className="flex items-center gap-2">
@@ -280,11 +303,11 @@ export default function Financeiro() {
               </span>
             </button>
             <button
-              onClick={() => setActiveTab('projecao')}
+              onClick={() => setActiveTab("projecao")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === 'projecao'
-                  ? 'bg-violet-500 text-white'
-                  : 'text-slate-600 hover:bg-slate-50'
+                activeTab === "projecao"
+                  ? "bg-violet-500 text-white"
+                  : "text-slate-600 hover:bg-slate-50"
               }`}
             >
               <span className="flex items-center gap-2">
@@ -303,8 +326,8 @@ export default function Financeiro() {
                   onClick={() => setPeriodoFiltro(p.value)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     periodoFiltro === p.value
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-600 hover:bg-slate-50'
+                      ? "bg-slate-800 text-white"
+                      : "text-slate-600 hover:bg-slate-50"
                   }`}
                 >
                   {p.label}
@@ -314,11 +337,17 @@ export default function Financeiro() {
 
             <Button
               variant="outline"
-              leftIcon={exportarComissoes.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              leftIcon={
+                exportarComissoes.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )
+              }
               onClick={() => exportarComissoes.mutate(periodoFiltro)}
               disabled={exportarComissoes.isPending}
             >
-              {exportarComissoes.isPending ? 'Exportando...' : 'Exportar CSV'}
+              {exportarComissoes.isPending ? "Exportando..." : "Exportar CSV"}
             </Button>
 
             <Button
@@ -331,26 +360,37 @@ export default function Financeiro() {
         </motion.div>
 
         {/* Dashboard View */}
-        {activeTab === 'dashboard' && (
+        {activeTab === "dashboard" && (
           <>
             {/* Stats Cards */}
-            <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-white">
+            <motion.div
+              variants={itemVariants}
+              className="grid grid-cols-1 md:grid-cols-4 gap-4"
+            >
+              <Card className="relative overflow-hidden bg-linear-to-br from-emerald-50 to-white">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-slate-500">Receita do Periodo</p>
                     <p className="text-2xl font-bold text-slate-800 mt-1">
-                      {chartsLoading ? '-' : formatCurrency(charts?.totais?.recebido || 0)}
+                      {chartsLoading
+                        ? "-"
+                        : formatCurrency(charts?.totais?.recebido || 0)}
                     </p>
-                    <div className={`flex items-center gap-1 mt-2 text-sm ${
-                      (charts?.totais?.variacaoPercentual || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
-                    }`}>
+                    <div
+                      className={`flex items-center gap-1 mt-2 text-sm ${
+                        (charts?.totais?.variacaoPercentual || 0) >= 0
+                          ? "text-emerald-600"
+                          : "text-red-500"
+                      }`}
+                    >
                       {(charts?.totais?.variacaoPercentual || 0) >= 0 ? (
                         <ArrowUpRight className="w-4 h-4" />
                       ) : (
                         <ArrowDownRight className="w-4 h-4" />
                       )}
-                      <span>{charts?.totais?.variacaoPercentual || 0}% vs anterior</span>
+                      <span>
+                        {charts?.totais?.variacaoPercentual || 0}% vs anterior
+                      </span>
                     </div>
                   </div>
                   <div className="p-3 rounded-xl bg-emerald-100 border border-emerald-200">
@@ -359,16 +399,20 @@ export default function Financeiro() {
                 </div>
                 <div className="absolute -right-5 -bottom-5 w-24 h-24 rounded-full blur-3xl opacity-20 bg-emerald-500" />
               </Card>
-              
-              <Card className="relative overflow-hidden bg-gradient-to-br from-amber-50 to-white">
+
+              <Card className="relative overflow-hidden bg-linear-to-br from-amber-50 to-white">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-slate-500">Pendentes</p>
                     <p className="text-2xl font-bold text-slate-800 mt-1">
-                      {chartsLoading ? '-' : formatCurrency(charts?.totais?.pendente || 0)}
+                      {chartsLoading
+                        ? "-"
+                        : formatCurrency(charts?.totais?.pendente || 0)}
                     </p>
                     <p className="text-sm text-slate-500 mt-2">
-                      {statsLoading ? '-' : `${stats?.comissoesPendentes || 0} comissoes`}
+                      {statsLoading
+                        ? "-"
+                        : `${stats?.comissoesPendentes || 0} comissoes`}
                     </p>
                   </div>
                   <div className="p-3 rounded-xl bg-amber-100 border border-amber-200">
@@ -377,13 +421,15 @@ export default function Financeiro() {
                 </div>
                 <div className="absolute -right-5 -bottom-5 w-24 h-24 rounded-full blur-3xl opacity-20 bg-amber-500" />
               </Card>
-              
-              <Card className="relative overflow-hidden bg-gradient-to-br from-violet-50 to-white">
+
+              <Card className="relative overflow-hidden bg-linear-to-br from-violet-50 to-white">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-slate-500">Valor Bruto</p>
                     <p className="text-2xl font-bold text-slate-800 mt-1">
-                      {chartsLoading ? '-' : formatCurrency(charts?.totais?.bruto || 0)}
+                      {chartsLoading
+                        ? "-"
+                        : formatCurrency(charts?.totais?.bruto || 0)}
                     </p>
                     <p className="text-sm text-slate-500 mt-2">Total gerado</p>
                   </div>
@@ -393,13 +439,15 @@ export default function Financeiro() {
                 </div>
                 <div className="absolute -right-5 -bottom-5 w-24 h-24 rounded-full blur-3xl opacity-20 bg-violet-500" />
               </Card>
-              
-              <Card className="relative overflow-hidden bg-gradient-to-br from-cyan-50 to-white">
+
+              <Card className="relative overflow-hidden bg-linear-to-br from-cyan-50 to-white">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-slate-500">Periodo Anterior</p>
                     <p className="text-2xl font-bold text-slate-800 mt-1">
-                      {chartsLoading ? '-' : formatCurrency(charts?.totais?.periodoAnterior || 0)}
+                      {chartsLoading
+                        ? "-"
+                        : formatCurrency(charts?.totais?.periodoAnterior || 0)}
                     </p>
                     <p className="text-sm text-slate-500 mt-2">Comparativo</p>
                   </div>
@@ -412,13 +460,18 @@ export default function Financeiro() {
             </motion.div>
 
             {/* Charts Row */}
-            <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <motion.div
+              variants={itemVariants}
+              className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+            >
               {/* Line Chart - Evolucao Mensal */}
               <Card className="lg:col-span-2">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-emerald-600" />
-                    <h3 className="text-sm font-semibold text-slate-800">Evolucao de Comissoes</h3>
+                    <h3 className="text-sm font-semibold text-slate-800">
+                      Evolucao de Comissoes
+                    </h3>
                   </div>
                   <div className="flex items-center gap-4 text-xs">
                     <span className="flex items-center gap-1">
@@ -447,7 +500,9 @@ export default function Financeiro() {
               <Card>
                 <div className="flex items-center gap-2 mb-4">
                   <PieChart className="w-5 h-5 text-violet-600" />
-                  <h3 className="text-sm font-semibold text-slate-800">Por Seguradora</h3>
+                  <h3 className="text-sm font-semibold text-slate-800">
+                    Por Seguradora
+                  </h3>
                 </div>
                 {chartsLoading ? (
                   <div className="flex items-center justify-center h-[200px]">
@@ -457,22 +512,42 @@ export default function Financeiro() {
                   <>
                     <div className="flex items-center justify-center">
                       <DonutChart
-                        data={charts?.comissoesPorSeguradora && charts.comissoesPorSeguradora.length > 0 
-                          ? charts.comissoesPorSeguradora 
-                          : [{ label: "Sem dados", value: 1, color: "#e2e8f0" }]
+                        data={
+                          charts?.comissoesPorSeguradora &&
+                          charts.comissoesPorSeguradora.length > 0
+                            ? charts.comissoesPorSeguradora
+                            : [
+                                {
+                                  label: "Sem dados",
+                                  value: 1,
+                                  color: "#e2e8f0",
+                                },
+                              ]
                         }
                         size={160}
-                        centerValue={formatCurrencyShort(charts?.totais?.recebido || 0)}
+                        centerValue={formatCurrencyShort(
+                          charts?.totais?.recebido || 0
+                        )}
                         centerLabel="Total"
                       />
                     </div>
                     <div className="flex flex-wrap justify-center gap-3 mt-4">
-                      {(charts?.comissoesPorSeguradora || []).slice(0, 4).map((item) => (
-                        <div key={item.label} className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                          <span className="text-xs text-slate-500">{item.label}</span>
-                        </div>
-                      ))}
+                      {(charts?.comissoesPorSeguradora || [])
+                        .slice(0, 4)
+                        .map((item) => (
+                          <div
+                            key={item.label}
+                            className="flex items-center gap-1.5"
+                          >
+                            <div
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: item.color }}
+                            />
+                            <span className="text-xs text-slate-500">
+                              {item.label}
+                            </span>
+                          </div>
+                        ))}
                     </div>
                   </>
                 )}
@@ -480,21 +555,22 @@ export default function Financeiro() {
             </motion.div>
 
             {/* Second Charts Row */}
-            <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <motion.div
+              variants={itemVariants}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+            >
               {/* Bar Chart - Comissoes Recebidas por Mes */}
               <Card>
                 <div className="flex items-center gap-2 mb-4">
                   <BarChart3 className="w-5 h-5 text-emerald-600" />
-                  <h3 className="text-sm font-semibold text-slate-800">Comissoes Recebidas por Mes</h3>
+                  <h3 className="text-sm font-semibold text-slate-800">
+                    Comissoes Recebidas por Mes
+                  </h3>
                 </div>
                 {chartsLoading ? (
                   <Skeleton height={180} />
                 ) : (
-                  <BarChart
-                    data={barChartData}
-                    height={180}
-                    showValues
-                  />
+                  <BarChart data={barChartData} height={180} showValues />
                 )}
               </Card>
 
@@ -502,7 +578,9 @@ export default function Financeiro() {
               <Card>
                 <div className="flex items-center gap-2 mb-4">
                   <PieChart className="w-5 h-5 text-cyan-600" />
-                  <h3 className="text-sm font-semibold text-slate-800">Comissoes por Ramo</h3>
+                  <h3 className="text-sm font-semibold text-slate-800">
+                    Comissoes por Ramo
+                  </h3>
                 </div>
                 {chartsLoading ? (
                   <div className="flex items-center justify-center h-[180px]">
@@ -511,24 +589,36 @@ export default function Financeiro() {
                 ) : (
                   <div className="flex items-center gap-6">
                     <DonutChart
-                      data={charts?.comissoesPorRamo && charts.comissoesPorRamo.length > 0 
-                        ? charts.comissoesPorRamo 
-                        : [{ label: "Sem dados", value: 1, color: "#e2e8f0" }]
+                      data={
+                        charts?.comissoesPorRamo &&
+                        charts.comissoesPorRamo.length > 0
+                          ? charts.comissoesPorRamo
+                          : [{ label: "Sem dados", value: 1, color: "#e2e8f0" }]
                       }
                       size={140}
                     />
                     <div className="flex-1 space-y-2">
-                      {(charts?.comissoesPorRamo || []).slice(0, 5).map((item) => (
-                        <div key={item.label} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                            <span className="text-xs text-slate-600">{item.label}</span>
+                      {(charts?.comissoesPorRamo || [])
+                        .slice(0, 5)
+                        .map((item) => (
+                          <div
+                            key={item.label}
+                            className="flex items-center justify-between"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: item.color }}
+                              />
+                              <span className="text-xs text-slate-600">
+                                {item.label}
+                              </span>
+                            </div>
+                            <span className="text-xs font-medium text-slate-800">
+                              {formatCurrencyShort(item.value)}
+                            </span>
                           </div>
-                          <span className="text-xs font-medium text-slate-800">
-                            {formatCurrencyShort(item.value)}
-                          </span>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   </div>
                 )}
@@ -538,7 +628,7 @@ export default function Financeiro() {
         )}
 
         {/* Lista View */}
-        {activeTab === 'lista' && (
+        {activeTab === "lista" && (
           <>
             {/* Toolbar */}
             <motion.div
@@ -570,9 +660,7 @@ export default function Financeiro() {
             </motion.div>
 
             {/* Loading */}
-            {isLoading && (
-              <Skeleton height={300} />
-            )}
+            {isLoading && <Skeleton height={300} />}
 
             {/* Error */}
             {error && (
@@ -590,10 +678,11 @@ export default function Financeiro() {
                       Comissoes Recentes
                     </h3>
                     <span className="text-sm text-slate-500">
-                      {filtered.length} {filtered.length === 1 ? 'registro' : 'registros'}
+                      {filtered.length}{" "}
+                      {filtered.length === 1 ? "registro" : "registros"}
                     </span>
                   </div>
-                  
+
                   {filtered.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full">
@@ -629,16 +718,17 @@ export default function Financeiro() {
                               className="hover:bg-slate-50 transition-colors"
                             >
                               <td className="px-4 py-3 text-sm text-slate-800 font-medium">
-                                {c.apolice?.numero_apolice || 'N/A'}
+                                {c.apolice?.numero_apolice || "N/A"}
                               </td>
                               <td className="px-4 py-3 text-sm text-slate-500">
-                                {c.apolice?.cliente?.nome || 'N/A'}
+                                {c.apolice?.cliente?.nome || "N/A"}
                               </td>
                               <td className="px-4 py-3 text-sm text-slate-500">
-                                {c.data_receita 
-                                  ? new Date(c.data_receita).toLocaleDateString("pt-BR")
-                                  : 'N/A'
-                                }
+                                {c.data_receita
+                                  ? new Date(c.data_receita).toLocaleDateString(
+                                      "pt-BR"
+                                    )
+                                  : "N/A"}
                               </td>
                               <td className="px-4 py-3 text-sm text-slate-500 text-right">
                                 {formatCurrency(c.valor_bruto || 0)}
@@ -649,18 +739,23 @@ export default function Financeiro() {
                               <td className="px-4 py-3 text-center">
                                 <span
                                   className={`px-2.5 py-1 rounded-lg text-xs font-medium inline-flex items-center gap-1 ${
-                                    c.status === "recebida" || c.status === "paga"
+                                    c.status === "recebida" ||
+                                    c.status === "paga"
                                       ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
                                       : "bg-amber-100 text-amber-700 border border-amber-200"
                                   }`}
                                 >
-                                  {c.status === "recebida" || c.status === "paga" ? (
+                                  {c.status === "recebida" ||
+                                  c.status === "paga" ? (
                                     <CheckCircle className="w-3 h-3" />
                                   ) : (
                                     <Clock className="w-3 h-3" />
                                   )}
-                                  {c.status === "recebida" ? "Recebida" : 
-                                   c.status === "paga" ? "Paga" : "Pendente"}
+                                  {c.status === "recebida"
+                                    ? "Recebida"
+                                    : c.status === "paga"
+                                      ? "Paga"
+                                      : "Pendente"}
                                 </span>
                               </td>
                               <td className="px-4 py-3">
@@ -696,13 +791,14 @@ export default function Financeiro() {
                     <EmptyState
                       icon={<DollarSign className="w-8 h-8" />}
                       title="Nenhuma comissao encontrada"
-                      description={search || filterStatus !== 'todos'
-                        ? "Tente ajustar os filtros" 
-                        : "Comece registrando sua primeira comissao"
+                      description={
+                        search || filterStatus !== "todos"
+                          ? "Tente ajustar os filtros"
+                          : "Comece registrando sua primeira comissao"
                       }
                       action={{
                         label: "Nova Comissao",
-                        onClick: () => setIsModalOpen(true)
+                        onClick: () => setIsModalOpen(true),
                       }}
                     />
                   )}
@@ -713,13 +809,20 @@ export default function Financeiro() {
         )}
 
         {/* Projecao View */}
-        {activeTab === 'projecao' && (
+        {activeTab === "projecao" && (
           <>
             {/* Periodo Selector */}
-            <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <motion.div
+              variants={itemVariants}
+              className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+            >
               <div>
-                <h3 className="text-lg font-semibold text-slate-800">Projecao de Fluxo de Caixa</h3>
-                <p className="text-sm text-slate-500">Receita esperada com base em renovacoes e comissoes pendentes</p>
+                <h3 className="text-lg font-semibold text-slate-800">
+                  Projecao de Fluxo de Caixa
+                </h3>
+                <p className="text-sm text-slate-500">
+                  Receita esperada com base em renovacoes e comissoes pendentes
+                </p>
               </div>
               <div className="flex gap-2">
                 {[3, 6, 12].map((m) => (
@@ -728,8 +831,8 @@ export default function Financeiro() {
                     onClick={() => setProjecaoMeses(m)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                       projecaoMeses === m
-                        ? 'bg-violet-500 text-white'
-                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                        ? "bg-violet-500 text-white"
+                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
                     }`}
                   >
                     {m} meses
@@ -742,15 +845,22 @@ export default function Financeiro() {
             {projecaoLoading ? (
               <Skeleton height={100} />
             ) : (
-              <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card className="relative overflow-hidden bg-gradient-to-br from-violet-50 to-white">
+              <motion.div
+                variants={itemVariants}
+                className="grid grid-cols-1 md:grid-cols-4 gap-4"
+              >
+                <Card className="relative overflow-hidden bg-linear-to-br from-violet-50 to-white">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-slate-500">Total Projetado</p>
                       <p className="text-2xl font-bold text-slate-800 mt-1">
-                        {formatCurrency(projecaoData?.totais?.totalProjetado || 0)}
+                        {formatCurrency(
+                          projecaoData?.totais?.totalProjetado || 0
+                        )}
                       </p>
-                      <p className="text-sm text-slate-500 mt-2">Proximos {projecaoMeses} meses</p>
+                      <p className="text-sm text-slate-500 mt-2">
+                        Proximos {projecaoMeses} meses
+                      </p>
                     </div>
                     <div className="p-3 rounded-xl bg-violet-100 border border-violet-200">
                       <Target className="w-6 h-6 text-violet-600" />
@@ -758,12 +868,14 @@ export default function Financeiro() {
                   </div>
                 </Card>
 
-                <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-white">
+                <Card className="relative overflow-hidden bg-linear-to-br from-emerald-50 to-white">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-slate-500">Renovacoes</p>
                       <p className="text-2xl font-bold text-slate-800 mt-1">
-                        {formatCurrency(projecaoData?.totais?.comissaoEsperadaRenovacoes || 0)}
+                        {formatCurrency(
+                          projecaoData?.totais?.comissaoEsperadaRenovacoes || 0
+                        )}
                       </p>
                       <p className="text-sm text-slate-500 mt-2">
                         {projecaoData?.totais?.renovacoes || 0} apolices
@@ -775,12 +887,14 @@ export default function Financeiro() {
                   </div>
                 </Card>
 
-                <Card className="relative overflow-hidden bg-gradient-to-br from-amber-50 to-white">
+                <Card className="relative overflow-hidden bg-linear-to-br from-amber-50 to-white">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-slate-500">Pendentes</p>
                       <p className="text-2xl font-bold text-slate-800 mt-1">
-                        {formatCurrency(projecaoData?.totais?.comissoesPendentes || 0)}
+                        {formatCurrency(
+                          projecaoData?.totais?.comissoesPendentes || 0
+                        )}
                       </p>
                       <p className="text-sm text-slate-500 mt-2">A receber</p>
                     </div>
@@ -790,14 +904,18 @@ export default function Financeiro() {
                   </div>
                 </Card>
 
-                <Card className="relative overflow-hidden bg-gradient-to-br from-cyan-50 to-white">
+                <Card className="relative overflow-hidden bg-linear-to-br from-cyan-50 to-white">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-slate-500">Media Mensal</p>
                       <p className="text-2xl font-bold text-slate-800 mt-1">
-                        {formatCurrency(projecaoData?.totais?.mediaRealizadoMensal || 0)}
+                        {formatCurrency(
+                          projecaoData?.totais?.mediaRealizadoMensal || 0
+                        )}
                       </p>
-                      <p className="text-sm text-slate-500 mt-2">Historico realizado</p>
+                      <p className="text-sm text-slate-500 mt-2">
+                        Historico realizado
+                      </p>
                     </div>
                     <div className="p-3 rounded-xl bg-cyan-100 border border-cyan-200">
                       <BarChart3 className="w-6 h-6 text-cyan-600" />
@@ -816,7 +934,9 @@ export default function Financeiro() {
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2">
                       <TrendingUp className="w-5 h-5 text-violet-600" />
-                      <h3 className="text-sm font-semibold text-slate-800">Projecao Mensal</h3>
+                      <h3 className="text-sm font-semibold text-slate-800">
+                        Projecao Mensal
+                      </h3>
                     </div>
                     <div className="flex items-center gap-4 text-xs">
                       <span className="flex items-center gap-1">
@@ -829,38 +949,54 @@ export default function Financeiro() {
                       </span>
                     </div>
                   </div>
-                  
+
                   {/* Custom Bar Chart */}
                   <div className="space-y-4">
                     {projecaoData?.projecao?.map((mes) => {
                       const maxValue = Math.max(
                         ...projecaoData.projecao.map((m) => m.totalProjetado)
                       );
-                      const renovacaoWidth = maxValue > 0 ? (mes.comissaoEsperada / maxValue) * 100 : 0;
-                      const pendenteWidth = maxValue > 0 ? (mes.comissoesPendentes / maxValue) * 100 : 0;
+                      const renovacaoWidth =
+                        maxValue > 0
+                          ? (mes.comissaoEsperada / maxValue) * 100
+                          : 0;
+                      const pendenteWidth =
+                        maxValue > 0
+                          ? (mes.comissoesPendentes / maxValue) * 100
+                          : 0;
                       const isExpanded = expandedMonth === mes.mes;
 
                       return (
                         <div key={mes.mes}>
-                          <div 
+                          <div
                             className="flex items-center gap-4 cursor-pointer hover:bg-slate-50 p-2 -mx-2 rounded-lg transition-colors"
-                            onClick={() => setExpandedMonth(isExpanded ? null : mes.mes)}
+                            onClick={() =>
+                              setExpandedMonth(isExpanded ? null : mes.mes)
+                            }
                           >
-                            <div className="w-16 text-sm font-medium text-slate-600 flex-shrink-0">
+                            <div className="w-16 text-sm font-medium text-slate-600 shrink-0">
                               {mes.label}
                             </div>
                             <div className="flex-1 flex gap-1 h-8 items-center">
                               {mes.comissaoEsperada > 0 && (
                                 <div
                                   className="h-6 bg-emerald-500 rounded-l-lg transition-all duration-300"
-                                  style={{ width: `${renovacaoWidth}%`, minWidth: mes.comissaoEsperada > 0 ? '4px' : 0 }}
+                                  style={{
+                                    width: `${renovacaoWidth}%`,
+                                    minWidth:
+                                      mes.comissaoEsperada > 0 ? "4px" : 0,
+                                  }}
                                   title={`Renovacoes: ${formatCurrency(mes.comissaoEsperada)}`}
                                 />
                               )}
                               {mes.comissoesPendentes > 0 && (
                                 <div
                                   className="h-6 bg-amber-500 rounded-r-lg transition-all duration-300"
-                                  style={{ width: `${pendenteWidth}%`, minWidth: mes.comissoesPendentes > 0 ? '4px' : 0 }}
+                                  style={{
+                                    width: `${pendenteWidth}%`,
+                                    minWidth:
+                                      mes.comissoesPendentes > 0 ? "4px" : 0,
+                                  }}
                                   title={`Pendentes: ${formatCurrency(mes.comissoesPendentes)}`}
                                 />
                               )}
@@ -875,14 +1011,16 @@ export default function Financeiro() {
                                 {formatCurrency(mes.totalProjetado)}
                               </span>
                             </div>
-                            <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                            <ChevronRight
+                              className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                            />
                           </div>
 
                           {/* Expanded Details */}
                           {isExpanded && mes.detalhes.length > 0 && (
                             <motion.div
                               initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
+                              animate={{ opacity: 1, height: "auto" }}
                               exit={{ opacity: 0, height: 0 }}
                               className="ml-20 mt-2 mb-4 space-y-2"
                             >
@@ -892,7 +1030,7 @@ export default function Financeiro() {
                                   className="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-sm"
                                 >
                                   <div className="flex items-center gap-2">
-                                    {detalhe.tipo === 'renovacao' ? (
+                                    {detalhe.tipo === "renovacao" ? (
                                       <RefreshCw className="w-3 h-3 text-emerald-600" />
                                     ) : (
                                       <Clock className="w-3 h-3 text-amber-600" />
@@ -928,12 +1066,14 @@ export default function Financeiro() {
               <motion.div variants={itemVariants}>
                 <Card>
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-slate-800">Proximas Renovacoes</h3>
+                    <h3 className="text-sm font-semibold text-slate-800">
+                      Proximas Renovacoes
+                    </h3>
                     <span className="text-xs text-slate-500">
                       {projecaoData?.totais?.renovacoes || 0} apolices a vencer
                     </span>
                   </div>
-                  
+
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
@@ -994,13 +1134,20 @@ export default function Financeiro() {
                             -
                           </td>
                           <td className="px-3 py-2 text-sm text-emerald-600 text-right font-bold">
-                            {formatCurrency(projecaoData?.totais?.comissaoEsperadaRenovacoes || 0)}
+                            {formatCurrency(
+                              projecaoData?.totais
+                                ?.comissaoEsperadaRenovacoes || 0
+                            )}
                           </td>
                           <td className="px-3 py-2 text-sm text-amber-600 text-right font-bold">
-                            {formatCurrency(projecaoData?.totais?.comissoesPendentes || 0)}
+                            {formatCurrency(
+                              projecaoData?.totais?.comissoesPendentes || 0
+                            )}
                           </td>
                           <td className="px-3 py-2 text-sm text-violet-600 text-right font-bold">
-                            {formatCurrency(projecaoData?.totais?.totalProjetado || 0)}
+                            {formatCurrency(
+                              projecaoData?.totais?.totalProjetado || 0
+                            )}
                           </td>
                         </tr>
                       </tfoot>
@@ -1032,22 +1179,24 @@ export default function Financeiro() {
             </label>
             <select
               value={formData.apolice_id}
-              onChange={(e) => handleFormChange('apolice_id', e.target.value)}
+              onChange={(e) => handleFormChange("apolice_id", e.target.value)}
               className={`
                 w-full px-4 py-2.5 bg-white border rounded-xl text-sm
                 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500
-                ${formErrors.apolice_id ? 'border-red-300' : 'border-slate-200'}
+                ${formErrors.apolice_id ? "border-red-300" : "border-slate-200"}
               `}
             >
               <option value="">Selecione uma apolice</option>
               {apolicesOptions.map((apolice: Apolice) => (
                 <option key={apolice.id} value={apolice.id}>
-                  {apolice.numero_apolice} - {apolice.cliente?.nome || 'N/A'}
+                  {apolice.numero_apolice} - {apolice.cliente?.nome || "N/A"}
                 </option>
               ))}
             </select>
             {formErrors.apolice_id && (
-              <p className="text-xs text-red-500 mt-1">{formErrors.apolice_id}</p>
+              <p className="text-xs text-red-500 mt-1">
+                {formErrors.apolice_id}
+              </p>
             )}
           </div>
 
@@ -1058,7 +1207,7 @@ export default function Financeiro() {
               step="0.01"
               placeholder="0,00"
               value={formData.valor_bruto}
-              onChange={(e) => handleFormChange('valor_bruto', e.target.value)}
+              onChange={(e) => handleFormChange("valor_bruto", e.target.value)}
               error={formErrors.valor_bruto}
             />
             <Input
@@ -1067,7 +1216,9 @@ export default function Financeiro() {
               step="0.01"
               placeholder="0,00"
               value={formData.valor_liquido}
-              onChange={(e) => handleFormChange('valor_liquido', e.target.value)}
+              onChange={(e) =>
+                handleFormChange("valor_liquido", e.target.value)
+              }
               error={formErrors.valor_liquido}
             />
           </div>
@@ -1076,7 +1227,7 @@ export default function Financeiro() {
             label="Data de Receita *"
             type="date"
             value={formData.data_receita}
-            onChange={(e) => handleFormChange('data_receita', e.target.value)}
+            onChange={(e) => handleFormChange("data_receita", e.target.value)}
             error={formErrors.data_receita}
           />
 
@@ -1087,12 +1238,15 @@ export default function Financeiro() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setFormData(prev => ({ ...prev, status: 'pendente' }))}
+                onClick={() =>
+                  setFormData((prev) => ({ ...prev, status: "pendente" }))
+                }
                 className={`
                   flex-1 p-3 rounded-xl border transition-all flex items-center justify-center gap-2
-                  ${formData.status === 'pendente'
-                    ? 'bg-amber-50 border-amber-200 text-amber-700'
-                    : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                  ${
+                    formData.status === "pendente"
+                      ? "bg-amber-50 border-amber-200 text-amber-700"
+                      : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                   }
                 `}
               >
@@ -1101,12 +1255,15 @@ export default function Financeiro() {
               </button>
               <button
                 type="button"
-                onClick={() => setFormData(prev => ({ ...prev, status: 'recebida' }))}
+                onClick={() =>
+                  setFormData((prev) => ({ ...prev, status: "recebida" }))
+                }
                 className={`
                   flex-1 p-3 rounded-xl border transition-all flex items-center justify-center gap-2
-                  ${formData.status === 'recebida'
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                    : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                  ${
+                    formData.status === "recebida"
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                      : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                   }
                 `}
               >
@@ -1128,17 +1285,14 @@ export default function Financeiro() {
           >
             Cancelar
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={createComissao.isPending}
-          >
+          <Button onClick={handleSubmit} disabled={createComissao.isPending}>
             {createComissao.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Salvando...
               </>
             ) : (
-              'Salvar Comissao'
+              "Salvar Comissao"
             )}
           </Button>
         </ModalFooter>
@@ -1190,7 +1344,7 @@ export default function Financeiro() {
                 Excluindo...
               </>
             ) : (
-              'Excluir Comissao'
+              "Excluir Comissao"
             )}
           </Button>
         </ModalFooter>

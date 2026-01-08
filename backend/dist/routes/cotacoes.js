@@ -4,6 +4,7 @@ const express_1 = require("express");
 const supabase_1 = require("../services/supabase");
 const auth_1 = require("../middleware/auth");
 const errorHandler_1 = require("../middleware/errorHandler");
+const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
 // ============================================
@@ -134,26 +135,52 @@ router.patch("/:id/status", (0, errorHandler_1.asyncHandler)(async (req, res) =>
     }
     if (status_pipeline === "fechada_ganha") {
         updates.data_fechamento = new Date().toISOString();
-        // Verificar se precisa criar cliente a partir do lead
-        if (!cotacaoAtual?.cliente_id) {
-            if (!cotacaoAtual?.lead_nome) {
-                // Se não tem nome, não dá para criar. Mas não vamos bloquear a mudança de status?
-                // Talvez logar aviso ou usar "Cliente Desconhecido"
+        const { dados_cliente } = req.body;
+        // Se enviou dados do cliente, criar ou atualizar
+        if (dados_cliente || !cotacaoAtual?.cliente_id) {
+            let clienteId = cotacaoAtual?.cliente_id;
+            if (clienteId) {
+                // Atualizar cliente existente
+                if (dados_cliente) {
+                    await supabase_1.supabase
+                        .from("clientes")
+                        .update({
+                        ...dados_cliente,
+                        ativo: true,
+                        updated_at: new Date().toISOString(),
+                    })
+                        .eq("id", clienteId);
+                }
+                else {
+                    // Apenas ativar se não mandou dados
+                    await supabase_1.supabase
+                        .from("clientes")
+                        .update({ ativo: true, updated_at: new Date().toISOString() })
+                        .eq("id", clienteId);
+                }
             }
             else {
-                const { data: newClient, error: errClient } = await supabase_1.supabase
-                    .from("clientes")
-                    .insert({
-                    nome: cotacaoAtual.lead_nome,
-                    telefone: cotacaoAtual.lead_telefone,
-                    tipo: "PF",
-                    cpf_cnpj: null,
+                // Criar novo cliente (Lead -> Cliente)
+                const novoCliente = {
+                    nome: dados_cliente?.nome ||
+                        cotacaoAtual?.lead_nome ||
+                        "Cliente (Lead)",
+                    telefone: dados_cliente?.telefone || cotacaoAtual?.lead_telefone,
+                    email: dados_cliente?.email,
+                    cpf_cnpj: dados_cliente?.cpf_cnpj,
+                    tipo: dados_cliente?.tipo || "PF",
                     ativo: true,
                     usuario_id: req.user?.id,
-                })
+                };
+                const { data: newClient, error: errClient } = await supabase_1.supabase
+                    .from("clientes")
+                    .insert(novoCliente)
                     .select()
                     .single();
-                if (newClient) {
+                if (errClient) {
+                    logger_1.logger.error("Erro ao criar cliente na conversão:", errClient);
+                }
+                else if (newClient) {
                     updates.cliente_id = newClient.id;
                 }
             }

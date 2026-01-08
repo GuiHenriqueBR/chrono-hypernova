@@ -156,7 +156,8 @@ export default function Financiamentos() {
   const { data: clientesData } = useClientes();
 
   const createFinanciamento = useMutation({
-    mutationFn: (data: any) => api.post("/financiamentos", data),
+    mutationFn: (data: Omit<Financiamento, "id" | "clientes">) =>
+      api.post("/financiamentos", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["financiamentos"] });
       queryClient.invalidateQueries({ queryKey: ["financiamentos-stats"] });
@@ -210,20 +211,23 @@ export default function Financiamentos() {
         cliente_id: formData.cliente_id,
         instituicao_financeira: formData.instituicao_financeira,
         numero_contrato: formData.numero_contrato,
-        tipo_financiamento: formData.tipo_financiamento,
+        tipo_financiamento: formData.tipo_financiamento as
+          | "imovel"
+          | "veiculo"
+          | "pessoal"
+          | "consignado"
+          | "outros",
         bem_financiado: formData.bem_financiado,
         valor_financiado: parseFloat(formData.valor_financiado),
         valor_parcela: parseFloat(formData.valor_parcela),
-        taxa_juros: formData.taxa_juros
-          ? parseFloat(formData.taxa_juros)
-          : null,
+        taxa_juros: formData.taxa_juros ? parseFloat(formData.taxa_juros) : 0,
         prazo_meses: parseInt(formData.prazo_meses),
         data_contratacao: formData.data_contratacao,
-        data_primeiro_vencimento: formData.data_primeiro_vencimento || null,
+        data_vencimento_parcela:
+          formData.data_primeiro_vencimento || formData.data_contratacao,
         saldo_devedor: parseFloat(formData.valor_financiado),
         status: "ativo",
         parcelas_pagas: 0,
-        parcelas_geradas: true,
       });
       setModal(false);
       setFormData(initialFormData);

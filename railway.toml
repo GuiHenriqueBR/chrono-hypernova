@@ -1,5 +1,5 @@
 [[services]]
-name = "backend"
+name = "chrono-backend"
 root = "backend"
 builder = "docker"
 dockerfilePath = "Dockerfile"

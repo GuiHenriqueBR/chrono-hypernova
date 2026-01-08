@@ -1,6 +1,13 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Sidebar } from "../components/layout/Sidebar";
-import { Button, Card, Badge, Modal, ModalFooter, Input } from "../components/common";
+import {
+  Button,
+  Card,
+  Badge,
+  Modal,
+  ModalFooter,
+  Input,
+} from "../components/common";
 import {
   MessageSquare,
   Search,
@@ -19,7 +26,6 @@ import {
   Zap,
   X,
   ChevronRight,
-  ChevronLeft,
   Copy,
   Star,
   Gift,
@@ -43,11 +49,13 @@ import {
   useTemplateVariaveis,
   useRegistrarUsoTemplate,
   useProcessarTemplate,
+  useAtribuirConversa,
   type WhatsAppConversa,
   type WhatsAppTemplate,
-  type TemplateCategoria,
 } from "../hooks/useWhatsApp";
 import { useClientes } from "../hooks/useClientes";
+import { adminService } from "../services/adminService";
+import { useQuery } from "@tanstack/react-query";
 
 const statusColors: Record<string, string> = {
   aberta: "bg-blue-100 text-blue-600",
@@ -70,7 +78,9 @@ const categoriaIcons: Record<string, React.ElementType> = {
 };
 
 export default function WhatsAppCRM() {
-  const [selectedChat, setSelectedChat] = useState<WhatsAppConversa | null>(null);
+  const [selectedChat, setSelectedChat] = useState<WhatsAppConversa | null>(
+    null
+  );
   const [inputText, setInputText] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todas");
@@ -85,7 +95,11 @@ export default function WhatsAppCRM() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Queries
-  const { data: conversasData, isLoading: isLoadingConversas, refetch: refetchConversas } = useWhatsAppConversas({
+  const {
+    data: conversasData,
+    isLoading: isLoadingConversas,
+    refetch: refetchConversas,
+  } = useWhatsAppConversas({
     status: filtroStatus,
     search: searchTerm,
   });
@@ -94,7 +108,10 @@ export default function WhatsAppCRM() {
   const { data: variaveisData } = useTemplateVariaveis();
   const { data: metricas } = useWhatsAppMetricas();
   const { data: statusConexao } = useWhatsAppStatus();
-  const { data: clientesData } = useClientes({ search: clienteSearch, limit: 10 });
+  const { data: clientesData } = useClientes({
+    search: clienteSearch,
+    limit: 10,
+  });
 
   // Mutations
   const enviarMensagem = useEnviarMensagem();
@@ -102,11 +119,31 @@ export default function WhatsAppCRM() {
   const atualizarStatus = useAtualizarStatusConversa();
   const registrarUsoTemplate = useRegistrarUsoTemplate();
   const processarTemplate = useProcessarTemplate();
+  const atribuirConversa = useAtribuirConversa();
 
-  const conversasList = useMemo(() => conversasData?.data || [], [conversasData?.data]);
-  const templates = useMemo(() => templatesData?.data || [], [templatesData?.data]);
-  const categorias = useMemo(() => categoriasData?.data || [], [categoriasData?.data]);
-  const variaveis = useMemo(() => variaveisData?.data || [], [variaveisData?.data]);
+  const { data: usersData } = useQuery({
+    queryKey: ["users"],
+    queryFn: adminService.getUsers,
+  });
+
+  const users = usersData || [];
+
+  const conversasList = useMemo(
+    () => conversasData?.data || [],
+    [conversasData?.data]
+  );
+  const templates = useMemo(
+    () => templatesData?.data || [],
+    [templatesData?.data]
+  );
+  const categorias = useMemo(
+    () => categoriasData?.data || [],
+    [categoriasData?.data]
+  );
+  const variaveis = useMemo(
+    () => variaveisData?.data || [],
+    [variaveisData?.data]
+  );
   const clientes = clientesData?.data || [];
 
   // Filtrar templates por busca
@@ -132,8 +169,12 @@ export default function WhatsAppCRM() {
   const effectiveSelectedChat = selectedChat || initialSelectedChat;
 
   // Query de mensagens usa effectiveSelectedChat
-  const { data: mensagensData, isLoading: isLoadingMensagens } = useWhatsAppMensagens(effectiveSelectedChat?.id || null);
-  const mensagensList = useMemo(() => mensagensData?.data || [], [mensagensData?.data]);
+  const { data: mensagensData, isLoading: isLoadingMensagens } =
+    useWhatsAppMensagens(effectiveSelectedChat?.id || null);
+  const mensagensList = useMemo(
+    () => mensagensData?.data || [],
+    [mensagensData?.data]
+  );
 
   // Scroll para ultima mensagem
   useEffect(() => {
@@ -188,24 +229,37 @@ export default function WhatsAppCRM() {
     }
   };
 
+  const handleAtribuirUsuario = async (usuarioId: string) => {
+    if (!effectiveSelectedChat) return;
+    try {
+      await atribuirConversa.mutateAsync({
+        conversaId: effectiveSelectedChat.id,
+        usuarioId: usuarioId || null,
+      });
+      refetchConversas();
+    } catch (error) {
+      console.error("Erro ao atribuir usuário:", error);
+    }
+  };
+
   const handleUsarTemplate = async (template: WhatsAppTemplate) => {
     // Processar variaveis do template
     const clienteId = effectiveSelectedChat?.clientes?.id;
-    
+
     try {
       const response = await processarTemplate.mutateAsync({
         template: template.conteudo,
         clienteId,
         contexto: {},
       });
-      
+
       setInputText(response.mensagem);
       registrarUsoTemplate.mutate(template.id);
     } catch {
       // Se falhar, usar template sem processar
       setInputText(template.conteudo);
     }
-    
+
     setShowTemplatesModal(false);
     setShowFloatingTemplates(false);
     inputRef.current?.focus();
@@ -215,18 +269,18 @@ export default function WhatsAppCRM() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ctrl/Cmd + T = Abrir templates
-      if ((e.ctrlKey || e.metaKey) && e.key === 't') {
+      if ((e.ctrlKey || e.metaKey) && e.key === "t") {
         e.preventDefault();
         setShowFloatingTemplates((prev) => !prev);
       }
       // Escape = Fechar painel flutuante
-      if (e.key === 'Escape' && showFloatingTemplates) {
+      if (e.key === "Escape" && showFloatingTemplates) {
         setShowFloatingTemplates(false);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showFloatingTemplates]);
 
   const formatarData = (data: string) => {
@@ -235,7 +289,11 @@ export default function WhatsAppCRM() {
     const diff = hoje.getTime() - d.getTime();
     const dias = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-    if (dias === 0) return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    if (dias === 0)
+      return d.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     if (dias === 1) return "Ontem";
     if (dias < 7) return d.toLocaleDateString("pt-BR", { weekday: "short" });
     return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
@@ -269,11 +327,15 @@ export default function WhatsAppCRM() {
             {/* Metricas Resumidas */}
             <div className="grid grid-cols-2 gap-2 mb-4">
               <div className="p-2 bg-violet-50 rounded-lg text-center">
-                <p className="text-lg font-bold text-violet-600">{metricas?.conversasAbertas || 0}</p>
+                <p className="text-lg font-bold text-violet-600">
+                  {metricas?.conversasAbertas || 0}
+                </p>
                 <p className="text-[10px] text-slate-500">Abertas</p>
               </div>
               <div className="p-2 bg-emerald-50 rounded-lg text-center">
-                <p className="text-lg font-bold text-emerald-600">{metricas?.mensagensHoje || 0}</p>
+                <p className="text-lg font-bold text-emerald-600">
+                  {metricas?.mensagensHoje || 0}
+                </p>
                 <p className="text-[10px] text-slate-500">Msgs Hoje</p>
               </div>
             </div>
@@ -292,19 +354,25 @@ export default function WhatsAppCRM() {
 
             {/* Filtros de Status */}
             <div className="flex gap-1 overflow-x-auto pb-1">
-              {["todas", "aberta", "em_atendimento", "resolvida"].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setFiltroStatus(status)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-                    filtroStatus === status
-                      ? "bg-violet-100 text-violet-700"
-                      : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                  }`}
-                >
-                  {status === "todas" ? "Todas" : status === "em_atendimento" ? "Atendendo" : status.charAt(0).toUpperCase() + status.slice(1)}
-                </button>
-              ))}
+              {["todas", "aberta", "em_atendimento", "resolvida"].map(
+                (status) => (
+                  <button
+                    key={status}
+                    onClick={() => setFiltroStatus(status)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                      filtroStatus === status
+                        ? "bg-violet-100 text-violet-700"
+                        : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                    }`}
+                  >
+                    {status === "todas"
+                      ? "Todas"
+                      : status === "em_atendimento"
+                        ? "Atendendo"
+                        : status.charAt(0).toUpperCase() + status.slice(1)}
+                  </button>
+                )
+              )}
             </div>
           </div>
 
@@ -317,7 +385,9 @@ export default function WhatsAppCRM() {
             ) : conversasList.length === 0 ? (
               <div className="p-8 text-center">
                 <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm text-slate-500">Nenhuma conversa encontrada</p>
+                <p className="text-sm text-slate-500">
+                  Nenhuma conversa encontrada
+                </p>
               </div>
             ) : (
               conversasList.map((chat) => (
@@ -325,26 +395,36 @@ export default function WhatsAppCRM() {
                   key={chat.id}
                   onClick={() => setSelectedChat(chat)}
                   className={`p-4 flex gap-3 cursor-pointer transition-colors border-b border-slate-50 ${
-                    effectiveSelectedChat?.id === chat.id ? "bg-violet-50/50" : "hover:bg-slate-50"
+                    effectiveSelectedChat?.id === chat.id
+                      ? "bg-violet-50/50"
+                      : "hover:bg-slate-50"
                   }`}
                 >
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${
-                      chat.clientes ? "bg-violet-100 text-violet-600" : "bg-slate-100 text-slate-600"
+                      chat.clientes
+                        ? "bg-violet-100 text-violet-600"
+                        : "bg-slate-100 text-slate-600"
                     }`}
                   >
                     {chat.nome_contato.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-baseline mb-1">
-                      <h3 className="font-semibold text-slate-800 truncate text-sm">{chat.nome_contato}</h3>
+                      <h3 className="font-semibold text-slate-800 truncate text-sm">
+                        {chat.nome_contato}
+                      </h3>
                       <span className="text-[10px] text-slate-400">
                         {formatarData(chat.ultima_mensagem_data)}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 truncate">{chat.ultima_mensagem}</p>
+                    <p className="text-xs text-slate-500 truncate">
+                      {chat.ultima_mensagem}
+                    </p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] ${statusColors[chat.status]}`}>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] ${statusColors[chat.status]}`}
+                      >
                         {chat.status}
                       </span>
                       {chat.clientes && (
@@ -393,14 +473,20 @@ export default function WhatsAppCRM() {
                   </button>
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                      effectiveSelectedChat.clientes ? "bg-violet-100 text-violet-600" : "bg-slate-100 text-slate-600"
+                      effectiveSelectedChat.clientes
+                        ? "bg-violet-100 text-violet-600"
+                        : "bg-slate-100 text-slate-600"
                     }`}
                   >
                     {effectiveSelectedChat.nome_contato.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-800 text-sm">{effectiveSelectedChat.nome_contato}</h3>
-                    <p className="text-[10px] text-slate-500">{effectiveSelectedChat.telefone}</p>
+                    <h3 className="font-bold text-slate-800 text-sm">
+                      {effectiveSelectedChat.nome_contato}
+                    </h3>
+                    <p className="text-[10px] text-slate-500">
+                      {effectiveSelectedChat.telefone}
+                    </p>
                   </div>
                 </div>
 
@@ -428,19 +514,41 @@ export default function WhatsAppCRM() {
                     <option value="arquivada">Arquivada</option>
                   </select>
 
-                  <Button variant="ghost" size="sm" className="text-slate-500 h-8 w-8 p-0">
+                  <select
+                    value={effectiveSelectedChat.atribuido_usuario_id || ""}
+                    onChange={(e) => handleAtribuirUsuario(e.target.value)}
+                    className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white max-w-[120px]"
+                    title="Atribuir Responsável"
+                  >
+                    <option value="">Sem responsável</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.nome || user.email}
+                      </option>
+                    ))}
+                  </select>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-slate-500 h-8 w-8 p-0"
+                  >
                     <Phone className="w-4 h-4" />
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="text-slate-500 h-8 w-8 p-0"
                     onClick={() => setShowTemplatesModal(true)}
                     title="Gerenciar Templates"
                   >
                     <FileText className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" className="text-slate-500 h-8 w-8 p-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-slate-500 h-8 w-8 p-0"
+                  >
                     <MoreVertical className="w-4 h-4" />
                   </Button>
                 </div>
@@ -451,10 +559,18 @@ export default function WhatsAppCRM() {
                 <div className="px-4 py-2 bg-violet-50 border-b border-violet-100 flex items-center gap-3">
                   <User className="w-4 h-4 text-violet-600" />
                   <div className="flex-1">
-                    <p className="text-xs font-medium text-violet-800">{effectiveSelectedChat.clientes.nome}</p>
-                    <p className="text-[10px] text-violet-600">{effectiveSelectedChat.clientes.email}</p>
+                    <p className="text-xs font-medium text-violet-800">
+                      {effectiveSelectedChat.clientes.nome}
+                    </p>
+                    <p className="text-[10px] text-violet-600">
+                      {effectiveSelectedChat.clientes.email}
+                    </p>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-violet-600 h-6 px-2 text-xs">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-violet-600 h-6 px-2 text-xs"
+                  >
                     Ver Perfil
                   </Button>
                 </div>
@@ -469,7 +585,9 @@ export default function WhatsAppCRM() {
                 ) : mensagensList.length === 0 ? (
                   <div className="text-center py-8">
                     <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-                    <p className="text-sm text-slate-500">Nenhuma mensagem ainda</p>
+                    <p className="text-sm text-slate-500">
+                      Nenhuma mensagem ainda
+                    </p>
                   </div>
                 ) : (
                   mensagensList.map((msg) => (
@@ -486,17 +604,24 @@ export default function WhatsAppCRM() {
                             : "bg-white text-slate-800 border border-slate-100 rounded-tl-none"
                         }`}
                       >
-                        <p className="leading-relaxed whitespace-pre-wrap">{msg.conteudo}</p>
+                        <p className="leading-relaxed whitespace-pre-wrap">
+                          {msg.conteudo}
+                        </p>
                         <div
                           className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
-                            msg.direcao === "enviada" ? "text-violet-200" : "text-slate-400"
+                            msg.direcao === "enviada"
+                              ? "text-violet-200"
+                              : "text-slate-400"
                           }`}
                         >
                           <span>
-                            {new Date(msg.timestamp).toLocaleTimeString("pt-BR", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                            {new Date(msg.timestamp).toLocaleTimeString(
+                              "pt-BR",
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
                           </span>
                           {msg.direcao === "enviada" &&
                             (msg.status === "lida" ? (
@@ -533,7 +658,9 @@ export default function WhatsAppCRM() {
                             <Zap className="w-4 h-4 text-violet-600" />
                             Templates Rapidos
                           </h3>
-                          <p className="text-[10px] text-slate-500 mt-1">Ctrl+T para abrir/fechar</p>
+                          <p className="text-[10px] text-slate-500 mt-1">
+                            Ctrl+T para abrir/fechar
+                          </p>
                         </div>
                         <div className="flex-1 overflow-y-auto p-2 space-y-1">
                           <button
@@ -548,7 +675,8 @@ export default function WhatsAppCRM() {
                             Todos
                           </button>
                           {categorias.map((cat) => {
-                            const Icon = categoriaIcons[cat.value] || MessageSquare;
+                            const Icon =
+                              categoriaIcons[cat.value] || MessageSquare;
                             return (
                               <button
                                 key={cat.value}
@@ -559,7 +687,10 @@ export default function WhatsAppCRM() {
                                     : "text-slate-600 hover:bg-slate-100"
                                 }`}
                               >
-                                <Icon className="w-4 h-4" style={{ color: cat.cor }} />
+                                <Icon
+                                  className="w-4 h-4"
+                                  style={{ color: cat.cor }}
+                                />
                                 {cat.label}
                               </button>
                             );
@@ -576,7 +707,9 @@ export default function WhatsAppCRM() {
                               type="text"
                               placeholder="Buscar templates..."
                               value={templateSearch}
-                              onChange={(e) => setTemplateSearch(e.target.value)}
+                              onChange={(e) =>
+                                setTemplateSearch(e.target.value)
+                              }
                               className="w-full pl-8 pr-3 py-1.5 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-violet-500/20 outline-none"
                             />
                           </div>
@@ -591,12 +724,18 @@ export default function WhatsAppCRM() {
                           {templatesFiltrados.length === 0 ? (
                             <div className="text-center py-8">
                               <MessageSquare className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                              <p className="text-sm text-slate-500">Nenhum template encontrado</p>
+                              <p className="text-sm text-slate-500">
+                                Nenhum template encontrado
+                              </p>
                             </div>
                           ) : (
                             templatesFiltrados.map((template) => {
-                              const CatIcon = categoriaIcons[template.categoria] || MessageSquare;
-                              const categoria = categorias.find((c) => c.value === template.categoria);
+                              const CatIcon =
+                                categoriaIcons[template.categoria] ||
+                                MessageSquare;
+                              const categoria = categorias.find(
+                                (c) => c.value === template.categoria
+                              );
                               return (
                                 <button
                                   key={template.id}
@@ -605,15 +744,21 @@ export default function WhatsAppCRM() {
                                 >
                                   <div className="flex items-start gap-2">
                                     <CatIcon
-                                      className="w-4 h-4 mt-0.5 flex-shrink-0"
-                                      style={{ color: categoria?.cor || "#6b7280" }}
+                                      className="w-4 h-4 mt-0.5 shrink-0"
+                                      style={{
+                                        color: categoria?.cor || "#6b7280",
+                                      }}
                                     />
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center justify-between gap-2">
                                         <span className="font-medium text-sm text-slate-800 truncate">
                                           {template.nome}
                                         </span>
-                                        <Badge variant="neutral" size="sm" className="flex-shrink-0">
+                                        <Badge
+                                          variant="neutral"
+                                          size="sm"
+                                          className="shrink-0"
+                                        >
                                           {template.categoria}
                                         </Badge>
                                       </div>
@@ -621,7 +766,7 @@ export default function WhatsAppCRM() {
                                         {template.conteudo}
                                       </p>
                                     </div>
-                                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-violet-500 flex-shrink-0 mt-0.5" />
+                                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-violet-500 shrink-0 mt-0.5" />
                                   </div>
                                 </button>
                               );
@@ -643,9 +788,13 @@ export default function WhatsAppCRM() {
                   <Button
                     variant="ghost"
                     className={`rounded-full w-9 h-9 p-0 shrink-0 transition-colors ${
-                      showFloatingTemplates ? "bg-violet-100 text-violet-600" : "text-slate-400 hover:text-slate-600"
+                      showFloatingTemplates
+                        ? "bg-violet-100 text-violet-600"
+                        : "text-slate-400 hover:text-slate-600"
                     }`}
-                    onClick={() => setShowFloatingTemplates(!showFloatingTemplates)}
+                    onClick={() =>
+                      setShowFloatingTemplates(!showFloatingTemplates)
+                    }
                     title="Templates (Ctrl+T)"
                   >
                     <Zap className="w-5 h-5" />
@@ -680,8 +829,12 @@ export default function WhatsAppCRM() {
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
                 <MessageSquare className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-700">Selecione uma conversa</h3>
-                <p className="text-sm text-slate-500">Escolha uma conversa para iniciar</p>
+                <h3 className="text-lg font-semibold text-slate-700">
+                  Selecione uma conversa
+                </h3>
+                <p className="text-sm text-slate-500">
+                  Escolha uma conversa para iniciar
+                </p>
               </div>
             </div>
           )}
@@ -716,7 +869,9 @@ export default function WhatsAppCRM() {
               </div>
             ))}
             {clientes.length === 0 && clienteSearch && (
-              <p className="text-center text-sm text-slate-500 py-4">Nenhum cliente encontrado</p>
+              <p className="text-center text-sm text-slate-500 py-4">
+                Nenhum cliente encontrado
+              </p>
             )}
           </div>
         </div>
@@ -750,7 +905,9 @@ export default function WhatsAppCRM() {
             </button>
             {categorias.map((cat) => {
               const Icon = categoriaIcons[cat.value] || MessageSquare;
-              const count = templatesData?.data?.filter((t) => t.categoria === cat.value).length || 0;
+              const count =
+                templatesData?.data?.filter((t) => t.categoria === cat.value)
+                  .length || 0;
               return (
                 <button
                   key={cat.value}
@@ -764,7 +921,9 @@ export default function WhatsAppCRM() {
                   <Icon className="w-4 h-4" style={{ color: cat.cor }} />
                   {cat.label}
                   {count > 0 && (
-                    <span className="ml-auto text-xs text-slate-400">{count}</span>
+                    <span className="ml-auto text-xs text-slate-400">
+                      {count}
+                    </span>
                   )}
                 </button>
               );
@@ -790,12 +949,17 @@ export default function WhatsAppCRM() {
             {templatesFiltrados.length === 0 ? (
               <div className="text-center py-12">
                 <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm text-slate-500">Nenhum template encontrado</p>
+                <p className="text-sm text-slate-500">
+                  Nenhum template encontrado
+                </p>
               </div>
             ) : (
               templatesFiltrados.map((template) => {
-                const CatIcon = categoriaIcons[template.categoria] || MessageSquare;
-                const categoria = categorias.find((c) => c.value === template.categoria);
+                const CatIcon =
+                  categoriaIcons[template.categoria] || MessageSquare;
+                const categoria = categorias.find(
+                  (c) => c.value === template.categoria
+                );
                 return (
                   <div
                     key={template.id}
@@ -808,7 +972,9 @@ export default function WhatsAppCRM() {
                             className="w-4 h-4"
                             style={{ color: categoria?.cor || "#6b7280" }}
                           />
-                          <h4 className="font-medium text-slate-800">{template.nome}</h4>
+                          <h4 className="font-medium text-slate-800">
+                            {template.nome}
+                          </h4>
                           <Badge variant="neutral" size="sm">
                             {template.categoria}
                           </Badge>
@@ -816,11 +982,12 @@ export default function WhatsAppCRM() {
                         <p className="text-sm text-slate-600 whitespace-pre-wrap line-clamp-3">
                           {template.conteudo}
                         </p>
-                        {template.uso_count !== undefined && template.uso_count > 0 && (
-                          <p className="text-xs text-slate-400 mt-2">
-                            Usado {template.uso_count} vezes
-                          </p>
-                        )}
+                        {template.uso_count !== undefined &&
+                          template.uso_count > 0 && (
+                            <p className="text-xs text-slate-400 mt-2">
+                              Usado {template.uso_count} vezes
+                            </p>
+                          )}
                       </div>
                       <Button
                         size="sm"
@@ -839,7 +1006,9 @@ export default function WhatsAppCRM() {
 
           {/* Variaveis Info Panel */}
           <div className="w-56 bg-slate-50 rounded-lg p-3 overflow-y-auto">
-            <h4 className="text-sm font-semibold text-slate-800 mb-3">Variaveis Disponiveis</h4>
+            <h4 className="text-sm font-semibold text-slate-800 mb-3">
+              Variaveis Disponiveis
+            </h4>
             <div className="space-y-2">
               {variaveis.map((v) => (
                 <div
@@ -849,16 +1018,25 @@ export default function WhatsAppCRM() {
                     setInputText((prev) => prev + v.nome);
                   }}
                 >
-                  <code className="text-xs text-violet-600 font-medium">{v.nome}</code>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{v.descricao}</p>
-                  <p className="text-[10px] text-slate-400 italic">Ex: {v.exemplo}</p>
+                  <code className="text-xs text-violet-600 font-medium">
+                    {v.nome}
+                  </code>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    {v.descricao}
+                  </p>
+                  <p className="text-[10px] text-slate-400 italic">
+                    Ex: {v.exemplo}
+                  </p>
                 </div>
               ))}
             </div>
           </div>
         </div>
         <ModalFooter>
-          <Button variant="outline" onClick={() => setShowTemplatesModal(false)}>
+          <Button
+            variant="outline"
+            onClick={() => setShowTemplatesModal(false)}
+          >
             Fechar
           </Button>
           <Button onClick={() => setShowTemplatesModal(false)}>
@@ -868,30 +1046,47 @@ export default function WhatsAppCRM() {
       </Modal>
 
       {/* Modal Metricas */}
-      <Modal isOpen={showMetricas} onClose={() => setShowMetricas(false)} title="Metricas WhatsApp" size="lg">
+      <Modal
+        isOpen={showMetricas}
+        onClose={() => setShowMetricas(false)}
+        title="Metricas WhatsApp"
+        size="lg"
+      >
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <Card className="text-center">
-            <p className="text-3xl font-bold text-violet-600">{metricas?.totalConversas || 0}</p>
+            <p className="text-3xl font-bold text-violet-600">
+              {metricas?.totalConversas || 0}
+            </p>
             <p className="text-sm text-slate-500">Total Conversas</p>
           </Card>
           <Card className="text-center">
-            <p className="text-3xl font-bold text-blue-600">{metricas?.conversasAbertas || 0}</p>
+            <p className="text-3xl font-bold text-blue-600">
+              {metricas?.conversasAbertas || 0}
+            </p>
             <p className="text-sm text-slate-500">Abertas</p>
           </Card>
           <Card className="text-center">
-            <p className="text-3xl font-bold text-emerald-600">{metricas?.mensagensHoje || 0}</p>
+            <p className="text-3xl font-bold text-emerald-600">
+              {metricas?.mensagensHoje || 0}
+            </p>
             <p className="text-sm text-slate-500">Msgs Hoje</p>
           </Card>
           <Card className="text-center">
-            <p className="text-3xl font-bold text-amber-600">{metricas?.mensagensSemana || 0}</p>
+            <p className="text-3xl font-bold text-amber-600">
+              {metricas?.mensagensSemana || 0}
+            </p>
             <p className="text-sm text-slate-500">Msgs Semana</p>
           </Card>
           <Card className="text-center">
-            <p className="text-3xl font-bold text-pink-600">{metricas?.mensagensMes || 0}</p>
+            <p className="text-3xl font-bold text-pink-600">
+              {metricas?.mensagensMes || 0}
+            </p>
             <p className="text-sm text-slate-500">Msgs Mes</p>
           </Card>
           <Card className="text-center">
-            <p className="text-3xl font-bold text-teal-600">{metricas?.taxaVinculacao || 0}%</p>
+            <p className="text-3xl font-bold text-teal-600">
+              {metricas?.taxaVinculacao || 0}%
+            </p>
             <p className="text-sm text-slate-500">Clientes Vinculados</p>
           </Card>
         </div>

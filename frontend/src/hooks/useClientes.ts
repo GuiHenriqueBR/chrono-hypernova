@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../services/api";
-import { Cliente } from "../types";
+import { Cliente, Apolice, Sinistro } from "../types";
 
 interface ClienteResponse {
   data: Cliente[];
@@ -51,7 +51,7 @@ export function useCliente(id?: string) {
 
 // GET - Apolices do cliente
 export function useClienteApolices(clienteId?: string) {
-  return useQuery<{ data: any[]; total: number }>({
+  return useQuery<{ data: Apolice[]; total: number }>({
     queryKey: ["cliente-apolices", clienteId],
     queryFn: () => api.get(`/clientes/${clienteId}/apolices`),
     enabled: !!clienteId,
@@ -60,7 +60,7 @@ export function useClienteApolices(clienteId?: string) {
 
 // GET - Sinistros do cliente
 export function useClienteSinistros(clienteId?: string) {
-  return useQuery<{ data: any[]; total: number }>({
+  return useQuery<{ data: Sinistro[]; total: number }>({
     queryKey: ["cliente-sinistros", clienteId],
     queryFn: () => api.get(`/clientes/${clienteId}/sinistros`),
     enabled: !!clienteId,
@@ -69,7 +69,7 @@ export function useClienteSinistros(clienteId?: string) {
 
 // GET - Consorcios do cliente
 export function useClienteConsorcios(clienteId?: string) {
-  return useQuery<{ data: any[]; total: number }>({
+  return useQuery<{ data: unknown[]; total: number }>({
     queryKey: ["cliente-consorcios", clienteId],
     queryFn: () => api.get(`/consorcios?cliente_id=${clienteId}`),
     enabled: !!clienteId,
@@ -78,7 +78,7 @@ export function useClienteConsorcios(clienteId?: string) {
 
 // GET - Planos de Saude do cliente
 export function useClientePlanosSaude(clienteId?: string) {
-  return useQuery<{ data: any[]; total: number }>({
+  return useQuery<{ data: unknown[]; total: number }>({
     queryKey: ["cliente-planos-saude", clienteId],
     queryFn: () => api.get(`/planos-saude?cliente_id=${clienteId}`),
     enabled: !!clienteId,
@@ -87,7 +87,7 @@ export function useClientePlanosSaude(clienteId?: string) {
 
 // GET - Financiamentos do cliente
 export function useClienteFinanciamentos(clienteId?: string) {
-  return useQuery<{ data: any[]; total: number }>({
+  return useQuery<{ data: unknown[]; total: number }>({
     queryKey: ["cliente-financiamentos", clienteId],
     queryFn: () => api.get(`/financiamentos?cliente_id=${clienteId}`),
     enabled: !!clienteId,
@@ -96,7 +96,7 @@ export function useClienteFinanciamentos(clienteId?: string) {
 
 // GET - Cotacoes do cliente
 export function useClienteCotacoes(clienteId?: string) {
-  return useQuery<{ data: any[]; total: number }>({
+  return useQuery<{ data: unknown[]; total: number }>({
     queryKey: ["cliente-cotacoes", clienteId],
     queryFn: () => api.get(`/cotacoes?cliente_id=${clienteId}`),
     enabled: !!clienteId,

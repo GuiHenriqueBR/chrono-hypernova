@@ -5,12 +5,9 @@ import {
   Plus,
   Search,
   Stethoscope,
-  Filter,
   Trash2,
   Users,
-  Activity,
   Heart,
-  FileText,
   Loader2,
   DollarSign,
   Clock,
@@ -140,7 +137,8 @@ export default function PlanosSaude() {
   const { data: clientesData } = useClientes();
 
   const createPlano = useMutation({
-    mutationFn: (data: any) => api.post("/planos-saude", data),
+    mutationFn: (data: Omit<PlanoSaude, "id" | "clientes">) =>
+      api.post("/planos-saude", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["planos-saude"] });
       queryClient.invalidateQueries({ queryKey: ["planos-saude-stats"] });
@@ -188,12 +186,19 @@ export default function PlanosSaude() {
         cliente_id: formData.cliente_id,
         operadora: formData.operadora,
         numero_contrato: formData.numero_contrato,
-        tipo_plano: formData.tipo_plano,
-        acomodacao: formData.acomodacao,
-        abrangencia: formData.abrangencia,
+        tipo_plano: formData.tipo_plano as
+          | "individual"
+          | "familiar"
+          | "empresarial"
+          | "adesao",
+        acomodacao: formData.acomodacao as "enfermaria" | "apartamento",
+        abrangencia: formData.abrangencia as
+          | "municipal"
+          | "estadual"
+          | "nacional",
         valor_mensalidade: parseFloat(formData.valor_mensalidade),
         data_contratacao: formData.data_contratacao,
-        data_vencimento: formData.data_vencimento || null,
+        data_vencimento: formData.data_vencimento || formData.data_contratacao,
         coparticipacao: formData.coparticipacao,
         status: "ativo",
       });

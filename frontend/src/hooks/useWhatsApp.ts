@@ -11,6 +11,7 @@ export interface WhatsAppConversa {
   nao_lidas: number;
   status: "aberta" | "em_atendimento" | "resolvida" | "arquivada";
   notas?: string;
+  atribuido_usuario_id?: string | null;
   created_at: string;
   clientes?: {
     id: string;
@@ -244,6 +245,25 @@ export function useAtualizarStatusConversa() {
       notas?: string;
     }) =>
       api.patch(`/whatsapp/conversas/${conversaId}/status`, { status, notas }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-conversas"] });
+    },
+  });
+}
+
+// Hook para atribuir conversa a um usuário
+export function useAtribuirConversa() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      conversaId,
+      usuarioId,
+    }: {
+      conversaId: string;
+      usuarioId: string | null;
+    }) =>
+      api.patch(`/whatsapp/conversas/${conversaId}/atribuir`, { usuarioId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["whatsapp-conversas"] });
     },

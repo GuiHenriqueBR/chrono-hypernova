@@ -562,8 +562,8 @@ async function extrairComIA(
 
     const base64Image = fileToBase64(filePath);
 
-    // Obter modelo (usando gemini-1.5-flash)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Obter modelo (usando gemini-3-flash-preview)
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
     // Preparar parts
     const parts = [
@@ -681,7 +681,7 @@ router.post(
         arquivo_nome: req.file.originalname,
         arquivo_tamanho: req.file.size,
         dados_extraidos: resultado.dados,
-        modelo: "gemini-1.5-flash",
+        modelo: "gemini-3-flash-preview",
         tokens_usados: resultado.tokens,
         usuario_id: userId,
       });

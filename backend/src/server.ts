@@ -28,11 +28,13 @@ import planoSaudeRoutes from "./routes/planos-saude";
 import financiamentoRoutes from "./routes/financiamentos";
 import produtoRoutes from "./routes/produtos";
 import pipelineRoutes from "./routes/pipeline";
+import adminRoutes from "./routes/admin";
 
 // Job Scheduler
 import { iniciarScheduler } from "./jobs/scheduler";
 
 const app = express();
+app.set("trust proxy", 1); // Trust first proxy (Railway/Nginx)
 const PORT = process.env.PORT || 3001;
 
 // Security middleware
@@ -101,6 +103,7 @@ app.use("/api/planos-saude", planoSaudeRoutes);
 app.use("/api/financiamentos", financiamentoRoutes);
 app.use("/api/produtos", produtoRoutes);
 app.use("/api/pipeline", pipelineRoutes);
+app.use("/api/admin", adminRoutes);
 
 // 404 handler
 app.use((req, res) => {

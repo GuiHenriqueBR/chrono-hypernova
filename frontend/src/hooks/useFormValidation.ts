@@ -40,8 +40,8 @@ export function useFormWithValidation<T extends FieldValues>({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useRHF<T>({
-    // @ts-ignore
-    resolver: zodResolver(schema) as any,
+    // @ts-expect-error - zodResolver type mismatch with strict mode
+    resolver: zodResolver(schema),
     mode: "onBlur",
     ...props,
   });
@@ -53,7 +53,8 @@ export function useFormWithValidation<T extends FieldValues>({
       setIsSubmitting(true);
 
       try {
-        await form.handleSubmit(async (data) => {
+        // @ts-expect-error - Complex generics mismatch between react-hook-form and zodResolver
+        await form.handleSubmit(async (data: T) => {
           await onSubmit(data);
         })(e);
       } catch (error: unknown) {
@@ -78,7 +79,7 @@ export function useFormWithValidation<T extends FieldValues>({
     submitError,
     handleFormSubmit,
     clearSubmitError,
-  };
+  } as unknown as UseFormReturnExtended<T>;
 }
 
 // ============================================

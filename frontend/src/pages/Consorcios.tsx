@@ -145,7 +145,8 @@ export default function Consorcios() {
   const { data: clientesData } = useClientes();
 
   const createConsorcio = useMutation({
-    mutationFn: (data: any) => api.post("/consorcios", data),
+    mutationFn: (data: Omit<Consorcio, "id" | "clientes">) =>
+      api.post("/consorcios", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["consorcios"] });
       queryClient.invalidateQueries({ queryKey: ["consorcios-stats"] });
@@ -199,9 +200,13 @@ export default function Consorcios() {
         valor_credito: parseFloat(formData.valor_credito),
         valor_parcela: parseFloat(formData.valor_parcela),
         prazo_meses: parseInt(formData.prazo_meses),
-        tipo_bem: formData.tipo_bem,
+        tipo_bem: formData.tipo_bem as
+          | "imovel"
+          | "veiculo"
+          | "servicos"
+          | "outros",
         data_adesao: formData.data_adesao,
-        data_proxima_assembleia: formData.data_proxima_assembleia || null,
+        data_proxima_assembleia: formData.data_proxima_assembleia || undefined,
         status: "ativo",
         parcelas_pagas: 0,
       });
