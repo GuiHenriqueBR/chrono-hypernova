@@ -5,6 +5,7 @@ builder = "docker"
 dockerfilePath = "Dockerfile"
 [services.env]
 PORT = "3000"
+NODE_ENV = "production"
 
 [[services]]
 name = "evolution-api"

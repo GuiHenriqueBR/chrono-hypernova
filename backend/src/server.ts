@@ -152,13 +152,36 @@ app.get("/", (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   logger.info(`Servidor rodando em porta ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV}`);
   logger.info(`Frontend URL: ${process.env.FRONTEND_URL}`);
 
   // Iniciar scheduler de alertas automaticos
   iniciarScheduler();
+});
+
+// Handle unhandled promise rejections
+process.on("unhandledRejection", (err: Error) => {
+  logger.error(`UNHANDLED REJECTION! 💥 Shutting down...`, {
+    name: err.name,
+    message: err.message,
+    stack: err.stack,
+  });
+  // Graceful shutdown
+  server.close(() => {
+    process.exit(1);
+  });
+});
+
+// Handle uncaught exceptions
+process.on("uncaughtException", (err: Error) => {
+  logger.error(`UNCAUGHT EXCEPTION! 💥 Shutting down...`, {
+    name: err.name,
+    message: err.message,
+    stack: err.stack,
+  });
+  process.exit(1);
 });
 
 export default app;
