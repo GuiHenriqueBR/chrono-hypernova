@@ -170,7 +170,7 @@ router.patch("/:id/status", (0, errorHandler_1.asyncHandler)(async (req, res) =>
                     cpf_cnpj: dados_cliente?.cpf_cnpj,
                     tipo: dados_cliente?.tipo || "PF",
                     ativo: true,
-                    usuario_id: req.user?.id,
+                    usuario_id: req.userId,
                 };
                 const { data: newClient, error: errClient } = await supabase_1.supabase
                     .from("clientes")
@@ -257,7 +257,8 @@ router.post("/:id/historico", (0, errorHandler_1.asyncHandler)(async (req, res) 
         cotacao_id: id,
         tipo_evento: tipo_evento || "anotacao",
         notas,
-        resultado, // 'positivo', 'neutro', 'negativo'
+        resultado,
+        usuario_id: req.userId,
         data_evento: new Date().toISOString(),
     })
         .select()
@@ -317,7 +318,7 @@ router.post("/:id/converter-proposta", (0, errorHandler_1.asyncHandler)(async (r
             tipo: "PF", // Default
             cpf_cnpj: null, // Lead pode não ter CPF ainda
             ativo: true,
-            usuario_id: req.user?.id,
+            usuario_id: req.userId,
         })
             .select()
             .single();

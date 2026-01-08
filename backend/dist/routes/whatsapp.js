@@ -10,7 +10,6 @@ const supabase_1 = require("../services/supabase");
 const logger_1 = require("../utils/logger");
 const axios_1 = __importDefault(require("axios"));
 const router = express_1.default.Router();
-router.use(auth_1.authenticate);
 // Configuracao da Evolution API (WhatsApp)
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || "http://localhost:8080";
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || "";
@@ -97,9 +96,10 @@ router.post("/webhook", (0, errorHandler_1.asyncHandler)(async (req, res) => {
     }
     res.json({ success: true });
 }));
+router.use(auth_1.authenticate);
 // Listar conversas
 router.get("/conversas", (0, errorHandler_1.asyncHandler)(async (req, res) => {
-    const userId = req.user?.id;
+    const userId = req.userId;
     const { status, search, page = 1, limit = 50 } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
     let query = supabase_1.supabase
@@ -513,6 +513,20 @@ router.patch("/conversas/:conversaId/status", (0, errorHandler_1.asyncHandler)(a
         throw error;
     res.json({ success: true });
 }));
+// Atribuir conversa a um usuário
+router.patch("/conversas/:conversaId/atribuir", (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const { conversaId } = req.params;
+    const { usuarioId } = req.body;
+    const { error } = await supabase_1.supabase
+        .from("whatsapp_conversas")
+        .update({
+        atribuido_usuario_id: usuarioId,
+    })
+        .eq("id", conversaId);
+    if (error)
+        throw error;
+    res.json({ success: true });
+}));
 // Metricas do WhatsApp
 router.get("/metricas", (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const hoje = new Date();
@@ -619,23 +633,44 @@ router.post("/instancia/criar", (0, errorHandler_1.asyncHandler)(async (req, res
 // Obter QR Code para conexao
 router.get("/qrcode", (0, errorHandler_1.asyncHandler)(async (req, res) => {
     try {
-        // Primeiro verifica o estado da conexao
-        const stateResponse = await evolutionApi.get(`/instance/connectionState/${EVOLUTION_INSTANCE}`);
-        const state = stateResponse.data?.instance?.state;
-        if (state === "open") {
-            return res.json({
-                success: true,
-                conectado: true,
-                estado: "open",
-                mensagem: "WhatsApp ja esta conectado",
-            });
+        // Tentar obter estado da conexao
+        try {
+            const stateResponse = await evolutionApi.get(`/instance/connectionState/${EVOLUTION_INSTANCE}`);
+            const state = stateResponse.data?.instance?.state;
+            if (state === "open") {
+                return res.json({
+                    success: true,
+                    conectado: true,
+                    estado: "open",
+                    mensagem: "WhatsApp ja esta conectado",
+                });
+            }
         }
-        // Se nao estiver conectado, buscar QR Code
+        catch (error) {
+            // Se der 404, a instancia nao existe. Tentar criar.
+            if (error.response?.status === 404) {
+                logger_1.logger.info(`Instancia ${EVOLUTION_INSTANCE} nao encontrada. Criando...`);
+                try {
+                    await evolutionApi.post("/instance/create", {
+                        instanceName: EVOLUTION_INSTANCE,
+                        qrcode: true,
+                        integration: "WHATSAPP-BAILEYS",
+                    });
+                    // Aguardar um pouco para a instancia subir
+                    await new Promise((resolve) => setTimeout(resolve, 2000));
+                }
+                catch (createError) {
+                    logger_1.logger.error("Erro ao criar instancia automatica:", createError);
+                    // Continua para tentar /connect que vai falhar e retornar erro adequado
+                }
+            }
+        }
+        // Buscar QR Code
         const response = await evolutionApi.get(`/instance/connect/${EVOLUTION_INSTANCE}`);
         res.json({
             success: true,
             conectado: false,
-            estado: state || "desconectado",
+            estado: "connecting",
             qrcode: response.data?.base64 || response.data?.qrcode?.base64,
             pairingCode: response.data?.pairingCode,
             instancia: EVOLUTION_INSTANCE,

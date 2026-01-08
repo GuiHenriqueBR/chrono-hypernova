@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { authenticate } from "../middleware/auth";
+import { authenticate, AuthRequest } from "../middleware/auth";
 import { asyncHandler } from "../middleware/errorHandler";
 import { supabase } from "../services/supabase";
 import { logger } from "../utils/logger";
@@ -113,8 +113,8 @@ router.use(authenticate);
 // Listar conversas
 router.get(
   "/conversas",
-  asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user?.id;
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.userId;
     const { status, search, page = 1, limit = 50 } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 

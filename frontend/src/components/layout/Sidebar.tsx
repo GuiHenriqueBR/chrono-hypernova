@@ -18,6 +18,7 @@ import {
   Wallet,
   FileSpreadsheet,
   Bell,
+  X,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { NotificationBell } from "../common";
@@ -40,32 +41,52 @@ const navigation = [
   { name: "Configuracoes", href: "/configuracoes", icon: Settings },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuthStore();
 
   return (
     <motion.aside
-      initial={{ x: -280 }}
-      animate={{ x: 0 }}
-      className="
+      initial={false}
+      animate={{
+        x: isOpen || window.innerWidth >= 1024 ? 0 : -280,
+      }}
+      transition={{ type: "spring", damping: 25, stiffness: 200 }}
+      className={`
         glass-sidebar
         fixed left-0 top-0 bottom-0
         w-[280px]
         flex flex-col
         z-50
-      "
+        lg:translate-x-0
+        ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+      `}
     >
-      {/* Logo */}
-      <div className="h-20 px-6 flex items-center gap-3 border-b border-white/40">
-        <div className="w-10 h-10 rounded-xl bg-linear-to-br from-violet-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
-          <Shield className="w-6 h-6 text-white" />
+      {/* Logo & Close Button (Mobile) */}
+      <div className="h-20 px-6 flex items-center justify-between border-b border-white/40">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-violet-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
+            <Shield className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-800 font-display">
+              Corretora
+            </h1>
+            <p className="text-xs text-slate-500 font-medium">System Premium</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 font-display">
-            Corretora
-          </h1>
-          <p className="text-xs text-slate-500 font-medium">System Premium</p>
-        </div>
+
+        {/* Close Button Mobile */}
+        <button
+          onClick={onClose}
+          className="lg:hidden p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Main Navigation */}
@@ -74,6 +95,7 @@ export function Sidebar() {
           <NavLink
             key={item.name}
             to={item.href}
+            onClick={() => window.innerWidth < 1024 && onClose?.()}
             className={({ isActive }) => `
               flex items-center gap-3 px-4 py-3 rounded-xl
               text-sm font-medium transition-all duration-300

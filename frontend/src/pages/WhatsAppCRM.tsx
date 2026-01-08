@@ -35,6 +35,7 @@ import {
   Heart,
   Info,
   Hand,
+  Settings,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {

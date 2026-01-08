@@ -31,9 +31,11 @@ const planos_saude_1 = __importDefault(require("./routes/planos-saude"));
 const financiamentos_1 = __importDefault(require("./routes/financiamentos"));
 const produtos_1 = __importDefault(require("./routes/produtos"));
 const pipeline_1 = __importDefault(require("./routes/pipeline"));
+const admin_1 = __importDefault(require("./routes/admin"));
 // Job Scheduler
 const scheduler_1 = require("./jobs/scheduler");
 const app = (0, express_1.default)();
+app.set("trust proxy", 1); // Trust first proxy (Railway/Nginx)
 const PORT = process.env.PORT || 3001;
 // Security middleware
 app.use((0, helmet_1.default)({
@@ -91,6 +93,7 @@ app.use("/api/planos-saude", planos_saude_1.default);
 app.use("/api/financiamentos", financiamentos_1.default);
 app.use("/api/produtos", produtos_1.default);
 app.use("/api/pipeline", pipeline_1.default);
+app.use("/api/admin", admin_1.default);
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({ error: "Endpoint não encontrado" });

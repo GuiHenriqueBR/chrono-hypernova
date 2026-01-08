@@ -542,8 +542,8 @@ async function extrairComIA(filePath, mimeType, tipoDocumento) {
             throw new Error(`Tipo de documento nao suportado: ${tipoDocumento}`);
         }
         const base64Image = fileToBase64(filePath);
-        // Obter modelo (usando gemini-3.0-flash)
-        const model = genAI.getGenerativeModel({ model: "gemini-3.0-flash" });
+        // Obter modelo (usando gemini-3-flash-preview)
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
         // Preparar parts
         const parts = [
             { text: prompt },
@@ -639,7 +639,7 @@ router.post("/extrair", upload.single("documento"), (0, errorHandler_1.asyncHand
             arquivo_nome: req.file.originalname,
             arquivo_tamanho: req.file.size,
             dados_extraidos: resultado.dados,
-            modelo: "gemini-3.0-flash",
+            modelo: "gemini-3-flash-preview",
             tokens_usados: resultado.tokens,
             usuario_id: userId,
         });

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../services/supabase";
-import { authenticate } from "../middleware/auth";
+import { authenticate, AuthRequest } from "../middleware/auth";
 import { asyncHandler } from "../middleware/errorHandler";
 import { logger } from "../utils/logger";
 
@@ -159,7 +159,7 @@ router.put(
 // ============================================
 router.patch(
   "/:id/status",
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { status_pipeline, motivo_perda, notas } = req.body;
 
@@ -230,7 +230,7 @@ router.patch(
             cpf_cnpj: dados_cliente?.cpf_cnpj,
             tipo: dados_cliente?.tipo || "PF",
             ativo: true,
-            usuario_id: (req as any).user?.id,
+            usuario_id: req.userId,
           };
 
           const { data: newClient, error: errClient } = await supabase
@@ -330,7 +330,7 @@ router.get(
 
 router.post(
   "/:id/historico",
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { tipo_evento, notas, resultado } = req.body;
 
@@ -342,7 +342,8 @@ router.post(
         cotacao_id: id,
         tipo_evento: tipo_evento || "anotacao",
         notas,
-        resultado, // 'positivo', 'neutro', 'negativo'
+        resultado,
+        usuario_id: req.userId,
         data_evento: new Date().toISOString(),
       })
       .select()
@@ -391,7 +392,7 @@ router.get(
 // Converter Cotacao em Proposta
 router.post(
   "/:id/converter-proposta",
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { proposta_escolhida } = req.body;
 
@@ -422,7 +423,7 @@ router.post(
           tipo: "PF", // Default
           cpf_cnpj: null, // Lead pode não ter CPF ainda
           ativo: true,
-          usuario_id: (req as any).user?.id,
+          usuario_id: req.userId,
         })
         .select()
         .single();

@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { Search, Bell, Menu } from "lucide-react";
-import { motion } from "framer-motion";
+import { Search, Menu } from "lucide-react";
+import { NotificationBell } from "../common/NotificationBell";
 
 interface HeaderProps {
   title: string;
   subtitle?: string;
+  onMenuClick?: () => void;
 }
 
-export function Header({ title, subtitle }: HeaderProps) {
+export function Header({ title, subtitle, onMenuClick }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   return (
@@ -24,7 +25,10 @@ export function Header({ title, subtitle }: HeaderProps) {
     >
       {/* Left - Page Title */}
       <div className="flex items-center gap-4">
-        <button className="lg:hidden p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg">
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+        >
           <Menu className="w-5 h-5" />
         </button>
         <div>
@@ -55,32 +59,7 @@ export function Header({ title, subtitle }: HeaderProps) {
         </div>
 
         {/* Notifications */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="
-            relative p-2
-            text-slate-500 hover:text-slate-800
-            hover:bg-slate-100
-            rounded-xl
-            transition-colors
-          "
-        >
-          <Bell className="w-5 h-5" />
-          {/* Notification badge */}
-          <span
-            className="
-            absolute -top-0.5 -right-0.5
-            w-4 h-4
-            bg-red-500 rounded-full
-            text-[10px] font-bold text-white
-            flex items-center justify-center
-            shadow-sm shadow-red-500/30
-          "
-          >
-            3
-          </span>
-        </motion.button>
+        <NotificationBell />
       </div>
     </header>
   );
