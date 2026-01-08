@@ -1,7 +1,7 @@
 {
   "framework": "vite",
-  "buildCommand": "cd apps/frontend && npm install && npx tsc && npx vite build",
-  "outputDirectory": "apps/frontend/dist",
-  "installCommand": "npm install --prefix apps/frontend",
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "installCommand": "echo 'skip root install'",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
