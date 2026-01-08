@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { Sidebar } from "../components/layout/Sidebar";
 import {
   Button,
@@ -312,15 +313,24 @@ export default function WhatsAppCRM() {
                 <MessageSquare className="w-5 h-5 text-violet-600" />
                 WhatsApp
               </h2>
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    statusConexao?.conectado ? "bg-emerald-500" : "bg-red-500"
-                  } ring-2 ring-white`}
-                />
-                <span className="text-xs text-slate-500 font-medium">
-                  {statusConexao?.conectado ? "Online" : "Offline"}
-                </span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      statusConexao?.conectado ? "bg-emerald-500" : "bg-red-500"
+                    } ring-2 ring-white`}
+                  />
+                  <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">
+                    {statusConexao?.conectado ? "Online" : "Offline"}
+                  </span>
+                </div>
+                <Link
+                  to="/whatsapp"
+                  className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-violet-50 hover:text-violet-600 transition-colors"
+                  title="Configurar Conexão"
+                >
+                  <Settings className="w-4 h-4" />
+                </Link>
               </div>
             </div>
 
@@ -826,16 +836,44 @@ export default function WhatsAppCRM() {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <MessageSquare className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-700">
-                  Selecione uma conversa
-                </h3>
-                <p className="text-sm text-slate-500">
-                  Escolha uma conversa para iniciar
-                </p>
-              </div>
+            <div className="flex-1 flex items-center justify-center p-8 text-center">
+              {!statusConexao?.conectado ? (
+                <div className="max-w-md bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100">
+                  <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <AlertTriangle className="w-8 h-8 text-red-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-800 mb-2">
+                    WhatsApp Desconectado
+                  </h3>
+                  <p className="text-sm text-slate-500 mb-8 leading-relaxed">
+                    Sua instância do WhatsApp não está conectada. Para enviar e
+                    receber mensagens através do CRM, você precisa escanear o QR
+                    Code de conexão.
+                  </p>
+                  <Link to="/whatsapp" className="w-full">
+                    <Button
+                      variant="primary"
+                      className="w-full"
+                      leftIcon={<Link2 className="w-4 h-4" />}
+                    >
+                      Ir para Conexão
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                    <MessageSquare className="w-10 h-10 text-slate-300" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-700 mb-2">
+                    Selecione uma conversa
+                  </h3>
+                  <p className="text-sm text-slate-500">
+                    Escolha uma conversa na lista ao lado para começar o
+                    atendimento.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

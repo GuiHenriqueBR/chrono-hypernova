@@ -12,6 +12,7 @@ import {
   Shield,
   MessageSquare,
   Upload,
+  Link2,
   Building2,
   Stethoscope,
   Wallet,
@@ -31,6 +32,7 @@ const navigation = [
   { name: "Planos de Saude", href: "/planos-saude", icon: Stethoscope },
   { name: "Financiamentos", href: "/financiamentos", icon: Wallet },
   { name: "WhatsApp CRM", href: "/crm", icon: MessageSquare },
+  { name: "Conexão WhatsApp", href: "/whatsapp", icon: Link2 },
   { name: "Financeiro", href: "/financeiro", icon: DollarSign },
   { name: "Alertas", href: "/alertas", icon: Bell },
   { name: "Agenda", href: "/agenda", icon: Calendar },
@@ -96,7 +98,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-{/* User Footer */}
+      {/* User Footer */}
       <div className="p-4 border-t border-white/40">
         <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/50 border border-white/60 shadow-sm">
           <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center text-violet-700 font-bold border border-violet-200">
