@@ -1,6 +1,6 @@
 {
   "framework": "vite",
-  "buildCommand": "cd frontend && npm install && npm run build",
+  "buildCommand": "npm run build --workspace=frontend",
   "outputDirectory": "frontend/dist",
   "installCommand": "npm install",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
