@@ -1,6 +1,6 @@
 [[services]]
 name = "chrono-backend"
-root = "backend"
+root = "apps/backend"
 builder = "docker"
 dockerfilePath = "Dockerfile"
 [services.env]
