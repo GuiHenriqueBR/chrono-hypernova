@@ -4,11 +4,11 @@
   "description": "Backend API para Sistema de Gestão de Corretora de Seguros",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
+    "dev": "npx ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "npx tsc",
     "start": "node dist/server.js",
-    "lint": "eslint src --ext .ts",
-    "test": "jest"
+    "lint": "npx eslint src --ext .ts",
+    "test": "npx jest"
   },
   "keywords": [
     "insurance",
