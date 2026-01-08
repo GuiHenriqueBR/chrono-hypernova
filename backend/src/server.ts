@@ -153,6 +153,9 @@ app.get("/", (req, res) => {
 
 // Start server
 const server = app.listen(PORT, () => {
+  logger.info(`=========================================`);
+  logger.info(`🚀 CHRONO BACKEND EXPRESS STARTING v2.0`);
+  logger.info(`=========================================`);
   logger.info(`Servidor rodando em porta ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV}`);
   logger.info(`Frontend URL: ${process.env.FRONTEND_URL}`);
