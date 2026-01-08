@@ -11,7 +11,9 @@ const logger_1 = require("../utils/logger");
 const axios_1 = __importDefault(require("axios"));
 const router = express_1.default.Router();
 // Configuracao da Evolution API (WhatsApp)
-const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || "http://localhost:8080";
+const isProduction = process.env.NODE_ENV === "production";
+const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL ||
+    (isProduction ? "http://evolution-api:8080" : "http://localhost:8080");
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || "";
 const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE || "corretora";
 // Helper para chamadas a Evolution API

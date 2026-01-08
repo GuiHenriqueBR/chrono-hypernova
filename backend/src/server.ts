@@ -37,6 +37,16 @@ const app = express();
 app.set("trust proxy", 1); // Trust first proxy (Railway/Nginx)
 const PORT = process.env.PORT || 3001;
 
+// Request logging - Early logging to capture all requests
+app.use((req, res, next) => {
+  logger.info(`[INCOMING] ${req.method} ${req.path}`, {
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+    origin: req.get("origin"),
+  });
+  next();
+});
+
 // Security middleware
 app.use(
   helmet({
@@ -45,9 +55,22 @@ app.use(
 );
 
 // CORS
+// Permitir múltiplas origens ou * para debug inicial se necessário
+const allowedOrigins = [
+  process.env.FRONTEND_URL || "http://localhost:5173",
+  "https://chrono-hypernova-ix8qfbbv1-guihenriquebrs-projects.vercel.app",
+  "https://chrono-hypernova.vercel.app",
+];
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      // Durante debug, vamos ser mais permissivos, mas idealmente filtrar
+      // if (allowedOrigins.indexOf(origin) === -1) { ... }
+      callback(null, true);
+    },
     credentials: true,
   })
 );
@@ -55,23 +78,15 @@ app.use(
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // Aumentado para debug/teste
   message: "Muitas requisições deste IP, tente novamente em 15 minutos",
 });
+// Aplicar rate limit em /api
 app.use("/api/", limiter);
 
 // Body parser
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
-
-// Request logging
-app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.path}`, {
-    ip: req.ip,
-    userAgent: req.get("user-agent"),
-  });
-  next();
-});
 
 // Health check
 app.get("/health", (req, res) => {
@@ -79,6 +94,15 @@ app.get("/health", (req, res) => {
     status: "ok",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
+    port: PORT,
+  });
+});
+
+// Root API check
+app.get("/api", (req, res) => {
+  res.json({
+    message: "API Root is accessible",
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -107,11 +131,25 @@ app.use("/api/admin", adminRoutes);
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ error: "Endpoint não encontrado" });
+  logger.warn(`[404] Route not found: ${req.method} ${req.path}`);
+  res.status(404).json({
+    error: "Endpoint não encontrado",
+    path: req.path,
+    method: req.method,
+  });
 });
 
 // Error handler (must be last)
 app.use(errorHandler);
+
+// Debug endpoint
+app.get("/", (req, res) => {
+  res.json({
+    message: "Backend is running!",
+    env: process.env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // Start server
 app.listen(PORT, () => {

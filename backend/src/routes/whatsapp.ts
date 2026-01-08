@@ -8,8 +8,10 @@ import axios from "axios";
 const router = express.Router();
 
 // Configuracao da Evolution API (WhatsApp)
+const isProduction = process.env.NODE_ENV === "production";
 const EVOLUTION_API_URL =
-  process.env.EVOLUTION_API_URL || "http://localhost:8080";
+  process.env.EVOLUTION_API_URL ||
+  (isProduction ? "http://evolution-api:8080" : "http://localhost:8080");
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || "";
 const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE || "corretora";
 
