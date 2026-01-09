@@ -4,7 +4,6 @@
   "private": true,
   "description": "Sistema de Gestao Completo para Corretora de Seguros",
   "workspaces": [
-    "frontend",
     "apps/backend",
     "packages/*"
   ],
