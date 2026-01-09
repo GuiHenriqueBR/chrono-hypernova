@@ -931,7 +931,37 @@ router.post(
         mensagem: "Instancia reiniciada com sucesso",
       });
     } catch (error: any) {
-      logger.error("Erro ao reiniciar:", error.response?.data || error.message);
+      const errorData = error.response?.data || error.message;
+      logger.error("Erro ao reiniciar:", errorData);
+
+      // Se a instancia nao existir (404), tentar criar
+      if (
+        error.response?.status === 404 ||
+        error.response?.data?.error?.includes("not found")
+      ) {
+        try {
+          logger.info(
+            `Instancia ${EVOLUTION_INSTANCE} nao encontrada no restart. Criando...`
+          );
+
+          await evolutionApi.post("/instance/create", {
+            instanceName: EVOLUTION_INSTANCE,
+            qrcode: true,
+            integration: "WHATSAPP-BAILEYS",
+          });
+
+          return res.json({
+            success: true,
+            mensagem: "Instancia nao existia e foi criada com sucesso",
+          });
+        } catch (createError: any) {
+          logger.error(
+            "Erro ao criar instancia (fallback restart):",
+            createError.response?.data || createError.message
+          );
+        }
+      }
+
       res.status(500).json({
         error: "Erro ao reiniciar",
         detalhes: error.response?.data?.message || error.message,
