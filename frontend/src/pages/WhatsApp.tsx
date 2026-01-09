@@ -25,7 +25,16 @@ import {
   Paperclip,
 } from "lucide-react";
 import { PageLayout } from "../components/layout";
-import { Button, Card, Modal, ModalFooter, Skeleton, EmptyState, Badge, Avatar } from "../components/common";
+import {
+  Button,
+  Card,
+  Modal,
+  ModalFooter,
+  Skeleton,
+  EmptyState,
+  Badge,
+  Avatar,
+} from "../components/common";
 import {
   useWhatsAppConversas,
   useWhatsAppMensagens,
@@ -82,7 +91,8 @@ function formatPhone(phone: string): string {
 export default function WhatsApp() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("todas");
-  const [selectedConversa, setSelectedConversa] = useState<WhatsAppConversa | null>(null);
+  const [selectedConversa, setSelectedConversa] =
+    useState<WhatsAppConversa | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
@@ -91,17 +101,27 @@ export default function WhatsApp() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // API hooks
-  const { data: conversasData, isLoading: loadingConversas, error: errorConversas, refetch: refetchConversas } = useWhatsAppConversas({
+  const {
+    data: conversasData,
+    isLoading: loadingConversas,
+    error: errorConversas,
+    refetch: refetchConversas,
+  } = useWhatsAppConversas({
     status: filterStatus,
     search: searchTerm,
   });
-  const { data: mensagensData, isLoading: loadingMensagens } = useWhatsAppMensagens(selectedConversa?.id || null);
+  const { data: mensagensData, isLoading: loadingMensagens } =
+    useWhatsAppMensagens(selectedConversa?.id || null);
   const { data: templatesData } = useWhatsAppTemplates();
   const { data: statusData, refetch: refetchStatus } = useWhatsAppStatus();
-  const { data: qrData, refetch: refetchQR, isLoading: loadingQR } = useWhatsAppQRCode(isQRModalOpen);
+  const {
+    data: qrData,
+    refetch: refetchQR,
+    isLoading: loadingQR,
+  } = useWhatsAppQRCode(isQRModalOpen);
   const { data: infoData } = useWhatsAppInfo();
   const { data: clientesData } = useClientes();
-  
+
   const enviarMensagem = useEnviarMensagem();
   const atualizarStatus = useAtualizarStatusConversa();
   const vincularCliente = useVincularCliente();
@@ -127,14 +147,21 @@ export default function WhatsApp() {
   // Selecionar primeira conversa por padrão
   useEffect(() => {
     if (filteredConversas.length > 0 && !selectedConversa) {
-      setSelectedConversa(filteredConversas[0]);
+      // Small timeout to avoid immediate state update during render cycle if not absolutely necessary,
+      // or simply accept it happens once.
+      // Better: Only set if truly null.
+      const timer = setTimeout(
+        () => setSelectedConversa(filteredConversas[0]),
+        0
+      );
+      return () => clearTimeout(timer);
     }
   }, [filteredConversas, selectedConversa]);
 
   // Scroll para última mensagem
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [mensagens]);
+  }, [mensagensData]); // Usar mensagensData em vez de mensagens array para evitar loop
 
   // Abrir modal QR se desconectado
   useEffect(() => {
@@ -173,7 +200,10 @@ export default function WhatsApp() {
         conversaId: selectedConversa.id,
         status,
       });
-      setSelectedConversa({ ...selectedConversa, status: status as WhatsAppConversa["status"] });
+      setSelectedConversa({
+        ...selectedConversa,
+        status: status as WhatsAppConversa["status"],
+      });
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
     }
@@ -220,41 +250,71 @@ export default function WhatsApp() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "aberta":
-        return <Badge variant="warning" size="sm">Nova</Badge>;
+        return (
+          <Badge variant="warning" size="sm">
+            Nova
+          </Badge>
+        );
       case "em_atendimento":
-        return <Badge variant="info" size="sm">Em atendimento</Badge>;
+        return (
+          <Badge variant="info" size="sm">
+            Em atendimento
+          </Badge>
+        );
       case "resolvida":
-        return <Badge variant="success" size="sm">Resolvida</Badge>;
+        return (
+          <Badge variant="success" size="sm">
+            Resolvida
+          </Badge>
+        );
       case "arquivada":
-        return <Badge variant="neutral" size="sm">Arquivada</Badge>;
+        return (
+          <Badge variant="neutral" size="sm">
+            Arquivada
+          </Badge>
+        );
       default:
         return null;
     }
   };
 
   return (
-    <PageLayout title="WhatsApp CRM" subtitle="Integração com clientes via WhatsApp">
+    <PageLayout
+      title="WhatsApp CRM"
+      subtitle="Integração com clientes via WhatsApp"
+    >
       {/* Status da conexão */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${isConnected ? "bg-emerald-100" : "bg-red-100"}`}>
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${isConnected ? "bg-emerald-100" : "bg-red-100"}`}
+          >
             {isConnected ? (
               <Wifi className="w-4 h-4 text-emerald-600" />
             ) : (
               <WifiOff className="w-4 h-4 text-red-600" />
             )}
-            <span className={`text-sm font-medium ${isConnected ? "text-emerald-700" : "text-red-700"}`}>
+            <span
+              className={`text-sm font-medium ${isConnected ? "text-emerald-700" : "text-red-700"}`}
+            >
               {isConnected ? "Conectado" : "Desconectado"}
             </span>
           </div>
-          
+
           {isConnected && infoData?.numero && (
             <span className="text-sm text-slate-500">
               {formatPhone(infoData.numero)}
             </span>
           )}
 
-          <Button variant="ghost" size="sm" onClick={() => { refetchConversas(); refetchStatus(); }}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              refetchConversas();
+              refetchStatus();
+            }}
+          >
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
@@ -270,7 +330,7 @@ export default function WhatsApp() {
               Conectar WhatsApp
             </Button>
           )}
-          
+
           <Button
             variant="ghost"
             size="sm"
@@ -307,7 +367,11 @@ export default function WhatsApp() {
                 Filtros
               </Button>
               {filterStatus !== "todas" && (
-                <Badge variant="info" size="sm" className="flex items-center gap-1">
+                <Badge
+                  variant="info"
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
                   {filterStatus}
                   <button onClick={() => setFilterStatus("todas")}>
                     <X className="w-3 h-3" />
@@ -334,32 +398,41 @@ export default function WhatsApp() {
           )}
 
           {/* Empty State - Não conectado */}
-          {!loadingConversas && !errorConversas && !isConnected && conversas.length === 0 && (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-              <WifiOff className="w-12 h-12 text-slate-300 mb-4" />
-              <h3 className="text-sm font-medium text-slate-700 mb-2">WhatsApp não conectado</h3>
-              <p className="text-xs text-slate-500 mb-4">Conecte seu WhatsApp para visualizar as conversas</p>
-              <Button size="sm" onClick={() => setIsQRModalOpen(true)}>
-                <QrCode className="w-4 h-4 mr-2" />
-                Conectar
-              </Button>
-            </div>
-          )}
+          {!loadingConversas &&
+            !errorConversas &&
+            !isConnected &&
+            conversas.length === 0 && (
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                <WifiOff className="w-12 h-12 text-slate-300 mb-4" />
+                <h3 className="text-sm font-medium text-slate-700 mb-2">
+                  WhatsApp não conectado
+                </h3>
+                <p className="text-xs text-slate-500 mb-4">
+                  Conecte seu WhatsApp para visualizar as conversas
+                </p>
+                <Button size="sm" onClick={() => setIsQRModalOpen(true)}>
+                  <QrCode className="w-4 h-4 mr-2" />
+                  Conectar
+                </Button>
+              </div>
+            )}
 
           {/* Conversas */}
-          {!loadingConversas && !errorConversas && (isConnected || conversas.length > 0) && (
-            <div className="flex-1 overflow-y-auto">
-              {filteredConversas.length === 0 ? (
-                <div className="p-4 text-center text-slate-500 text-sm">
-                  Nenhuma conversa encontrada
-                </div>
-              ) : (
-                filteredConversas.map((conversa) => (
-                  <motion.button
-                    key={conversa.id}
-                    onClick={() => setSelectedConversa(conversa)}
-                    whileHover={{ x: 2 }}
-                    className={`
+          {!loadingConversas &&
+            !errorConversas &&
+            (isConnected || conversas.length > 0) && (
+              <div className="flex-1 overflow-y-auto">
+                {filteredConversas.length === 0 ? (
+                  <div className="p-4 text-center text-slate-500 text-sm">
+                    Nenhuma conversa encontrada
+                  </div>
+                ) : (
+                  filteredConversas.map((conversa) => (
+                    <motion.button
+                      key={conversa.id}
+                      onClick={() => setSelectedConversa(conversa)}
+                      whileHover={{ x: 2 }}
+                      className={`
                       w-full p-4 border-b border-slate-100 text-left
                       transition-all
                       ${
@@ -368,39 +441,43 @@ export default function WhatsApp() {
                           : "hover:bg-slate-50"
                       }
                     `}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Avatar name={conversa.nome_contato} size="md" />
+                    >
+                      <div className="flex items-start gap-3">
+                        <Avatar name={conversa.nome_contato} size="md" />
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="text-sm font-semibold text-slate-800 truncate">
-                            {conversa.nome_contato}
-                          </h4>
-                          <span className="text-xs text-slate-500">
-                            {conversa.ultima_mensagem_data ? formatRelativeTime(conversa.ultima_mensagem_data) : ""}
-                          </span>
-                        </div>
-
-                        <p className="text-xs text-slate-600 line-clamp-2 mb-2">
-                          {conversa.ultima_mensagem || "Sem mensagens"}
-                        </p>
-
-                        <div className="flex items-center justify-between">
-                          {getStatusBadge(conversa.status)}
-                          {conversa.nao_lidas > 0 && (
-                            <span className="px-2 py-0.5 bg-violet-500 text-white text-[10px] font-bold rounded-full">
-                              {conversa.nao_lidas}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="text-sm font-semibold text-slate-800 truncate">
+                              {conversa.nome_contato}
+                            </h4>
+                            <span className="text-xs text-slate-500">
+                              {conversa.ultima_mensagem_data
+                                ? formatRelativeTime(
+                                    conversa.ultima_mensagem_data
+                                  )
+                                : ""}
                             </span>
-                          )}
+                          </div>
+
+                          <p className="text-xs text-slate-600 line-clamp-2 mb-2">
+                            {conversa.ultima_mensagem || "Sem mensagens"}
+                          </p>
+
+                          <div className="flex items-center justify-between">
+                            {getStatusBadge(conversa.status)}
+                            {conversa.nao_lidas > 0 && (
+                              <span className="px-2 py-0.5 bg-violet-500 text-white text-[10px] font-bold rounded-full">
+                                {conversa.nao_lidas}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.button>
-                ))
-              )}
-            </div>
-          )}
+                    </motion.button>
+                  ))
+                )}
+              </div>
+            )}
         </div>
 
         {/* Chat */}
@@ -457,7 +534,7 @@ export default function WhatsApp() {
                       Arquivar conversa
                     </button>
                     {!selectedConversa.cliente_id && (
-                      <button 
+                      <button
                         onClick={() => setIsVincularModalOpen(true)}
                         className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                       >
@@ -509,21 +586,26 @@ export default function WhatsApp() {
                             <Paperclip className="w-4 h-4" />
                           </div>
                         )}
-                        <p className="text-sm whitespace-pre-wrap">{message.conteudo}</p>
+                        <p className="text-sm whitespace-pre-wrap">
+                          {message.conteudo}
+                        </p>
                         <div
                           className={`flex items-center gap-1 mt-1 ${
-                            message.direcao === "recebida" ? "justify-start" : "justify-end"
+                            message.direcao === "recebida"
+                              ? "justify-start"
+                              : "justify-end"
                           }`}
                         >
                           <Clock className="w-3 h-3 opacity-60" />
-                          <span className="text-[10px] opacity-60">{formatTime(message.timestamp)}</span>
-                          {message.direcao === "enviada" && (
-                            message.status === "lida" ? (
+                          <span className="text-[10px] opacity-60">
+                            {formatTime(message.timestamp)}
+                          </span>
+                          {message.direcao === "enviada" &&
+                            (message.status === "lida" ? (
                               <CheckCircle2 className="w-3 h-3 opacity-60" />
                             ) : message.status === "pendente" ? (
                               <Clock className="w-3 h-3 opacity-60" />
-                            ) : null
-                          )}
+                            ) : null)}
                         </div>
                       </div>
                     </motion.div>
@@ -539,10 +621,16 @@ export default function WhatsApp() {
                 <div className="flex-1 relative">
                   <input
                     type="text"
-                    placeholder={isConnected ? "Digite sua mensagem..." : "Conecte o WhatsApp para enviar mensagens"}
+                    placeholder={
+                      isConnected
+                        ? "Digite sua mensagem..."
+                        : "Conecte o WhatsApp para enviar mensagens"
+                    }
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && !e.shiftKey && handleSendMessage()
+                    }
                     className="w-full px-4 py-2.5 bg-slate-100 border border-transparent rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-violet-300 transition-all"
                     disabled={enviarMensagem.isPending || !isConnected}
                   />
@@ -557,7 +645,11 @@ export default function WhatsApp() {
                       <Send className="w-4 h-4" />
                     )
                   }
-                  disabled={!newMessage.trim() || enviarMensagem.isPending || !isConnected}
+                  disabled={
+                    !newMessage.trim() ||
+                    enviarMensagem.isPending ||
+                    !isConnected
+                  }
                 >
                   Enviar
                 </Button>
@@ -566,7 +658,9 @@ export default function WhatsApp() {
               {/* Quick Replies */}
               {templates.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-xs text-slate-500 mb-2 font-medium">Respostas Rápidas:</p>
+                  <p className="text-xs text-slate-500 mb-2 font-medium">
+                    Respostas Rápidas:
+                  </p>
                   <div className="flex gap-2 flex-wrap">
                     {templates.slice(0, 3).map((template) => (
                       <button
@@ -587,12 +681,24 @@ export default function WhatsApp() {
           <div className="flex-1 flex items-center justify-center bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200">
             <EmptyState
               icon={<MessageSquare className="w-8 h-8" />}
-              title={isConnected ? "Selecione uma conversa" : "WhatsApp não conectado"}
-              description={isConnected ? "Escolha uma conversa na lista para visualizar as mensagens" : "Conecte seu WhatsApp para começar"}
-              action={!isConnected ? {
-                label: "Conectar WhatsApp",
-                onClick: () => setIsQRModalOpen(true)
-              } : undefined}
+              title={
+                isConnected
+                  ? "Selecione uma conversa"
+                  : "WhatsApp não conectado"
+              }
+              description={
+                isConnected
+                  ? "Escolha uma conversa na lista para visualizar as mensagens"
+                  : "Conecte seu WhatsApp para começar"
+              }
+              action={
+                !isConnected
+                  ? {
+                      label: "Conectar WhatsApp",
+                      onClick: () => setIsQRModalOpen(true),
+                    }
+                  : undefined
+              }
             />
           </div>
         )}
@@ -602,15 +708,21 @@ export default function WhatsApp() {
           <div className="w-72 flex flex-col gap-4">
             {/* Cliente Info */}
             <Card padding="sm">
-              <h4 className="text-sm font-semibold text-slate-800 mb-3">Informações do Contato</h4>
+              <h4 className="text-sm font-semibold text-slate-800 mb-3">
+                Informações do Contato
+              </h4>
               <div className="space-y-2">
                 <div>
                   <p className="text-xs text-slate-500">Nome</p>
-                  <p className="text-sm text-slate-800">{selectedConversa.nome_contato}</p>
+                  <p className="text-sm text-slate-800">
+                    {selectedConversa.nome_contato}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Telefone</p>
-                  <p className="text-sm text-slate-800">{formatPhone(selectedConversa.telefone)}</p>
+                  <p className="text-sm text-slate-800">
+                    {formatPhone(selectedConversa.telefone)}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Status</p>
@@ -619,10 +731,17 @@ export default function WhatsApp() {
                 {selectedConversa.cliente_id ? (
                   <div>
                     <p className="text-xs text-slate-500">Cliente Vinculado</p>
-                    <Badge variant="success" size="sm">Vinculado</Badge>
+                    <Badge variant="success" size="sm">
+                      Vinculado
+                    </Badge>
                   </div>
                 ) : (
-                  <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => setIsVincularModalOpen(true)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-2"
+                    onClick={() => setIsVincularModalOpen(true)}
+                  >
                     <Link2 className="w-4 h-4 mr-2" />
                     Vincular a cliente
                   </Button>
@@ -633,7 +752,9 @@ export default function WhatsApp() {
             {/* Templates */}
             {templates.length > 0 && (
               <Card>
-                <h4 className="text-sm font-semibold text-slate-800 mb-3">Templates de Resposta</h4>
+                <h4 className="text-sm font-semibold text-slate-800 mb-3">
+                  Templates de Resposta
+                </h4>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {templates.map((template) => (
                     <button
@@ -673,29 +794,49 @@ export default function WhatsApp() {
           ) : qrData?.conectado ? (
             <div className="flex flex-col items-center py-8">
               <CheckCircle2 className="w-16 h-16 text-emerald-500 mb-4" />
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">WhatsApp Conectado!</h3>
-              <p className="text-sm text-slate-600">Seu WhatsApp está pronto para uso.</p>
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                WhatsApp Conectado!
+              </h3>
+              <p className="text-sm text-slate-600">
+                Seu WhatsApp está pronto para uso.
+              </p>
             </div>
           ) : qrData?.qrcode ? (
             <div className="flex flex-col items-center">
               <div className="bg-white p-4 rounded-xl border-2 border-slate-200 mb-4">
-                <img 
-                  src={`data:image/png;base64,${qrData.qrcode}`} 
-                  alt="QR Code WhatsApp" 
+                <img
+                  src={
+                    qrData.qrcode?.startsWith("data:")
+                      ? qrData.qrcode
+                      : `data:image/png;base64,${qrData.qrcode}`
+                  }
+                  alt="QR Code WhatsApp"
                   className="w-64 h-64"
                 />
               </div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">Escaneie o QR Code</h3>
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                Escaneie o QR Code
+              </h3>
               <p className="text-sm text-slate-600 mb-4">
-                Abra o WhatsApp no seu celular, vá em Configurações &gt; Dispositivos Conectados &gt; Conectar um dispositivo
+                Abra o WhatsApp no seu celular, vá em Configurações &gt;
+                Dispositivos Conectados &gt; Conectar um dispositivo
               </p>
               {qrData.pairingCode && (
                 <div className="bg-slate-100 px-4 py-2 rounded-lg">
-                  <p className="text-xs text-slate-500 mb-1">Ou use o código de pareamento:</p>
-                  <p className="text-lg font-mono font-bold text-slate-800">{qrData.pairingCode}</p>
+                  <p className="text-xs text-slate-500 mb-1">
+                    Ou use o código de pareamento:
+                  </p>
+                  <p className="text-lg font-mono font-bold text-slate-800">
+                    {qrData.pairingCode}
+                  </p>
                 </div>
               )}
-              <Button variant="ghost" size="sm" onClick={() => refetchQR()} className="mt-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => refetchQR()}
+                className="mt-4"
+              >
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Atualizar QR Code
               </Button>
@@ -703,9 +844,12 @@ export default function WhatsApp() {
           ) : (
             <div className="flex flex-col items-center py-8">
               <WifiOff className="w-16 h-16 text-slate-300 mb-4" />
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">Não foi possível gerar QR Code</h3>
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                Não foi possível gerar QR Code
+              </h3>
               <p className="text-sm text-slate-600 mb-4">
-                {qrData?.mensagem || "Verifique se a Evolution API está configurada corretamente."}
+                {qrData?.mensagem ||
+                  "Verifique se a Evolution API está configurada corretamente."}
               </p>
               <Button onClick={() => refetchQR()}>
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -743,7 +887,9 @@ export default function WhatsApp() {
                   {isConnected ? "Conectado" : "Desconectado"}
                 </p>
                 {infoData?.numero && (
-                  <p className="text-xs text-slate-500">{formatPhone(infoData.numero)}</p>
+                  <p className="text-xs text-slate-500">
+                    {formatPhone(infoData.numero)}
+                  </p>
                 )}
               </div>
             </div>
@@ -752,8 +898,8 @@ export default function WhatsApp() {
           {/* Ações */}
           <div className="space-y-2">
             {!isConnected && (
-              <Button 
-                className="w-full" 
+              <Button
+                className="w-full"
                 leftIcon={<QrCode className="w-4 h-4" />}
                 onClick={() => {
                   setIsSettingsOpen(false);
@@ -763,26 +909,28 @@ export default function WhatsApp() {
                 Conectar WhatsApp
               </Button>
             )}
-            
-            <Button 
-              variant="outline" 
-              className="w-full" 
+
+            <Button
+              variant="outline"
+              className="w-full"
               leftIcon={<RotateCcw className="w-4 h-4" />}
               onClick={handleReiniciar}
               disabled={reiniciar.isPending}
             >
               {reiniciar.isPending ? "Reiniciando..." : "Reiniciar Instância"}
             </Button>
-            
+
             {isConnected && (
-              <Button 
-                variant="danger" 
-                className="w-full" 
+              <Button
+                variant="danger"
+                className="w-full"
                 leftIcon={<LogOut className="w-4 h-4" />}
                 onClick={handleDesconectar}
                 disabled={desconectar.isPending}
               >
-                {desconectar.isPending ? "Desconectando..." : "Desconectar WhatsApp"}
+                {desconectar.isPending
+                  ? "Desconectando..."
+                  : "Desconectar WhatsApp"}
               </Button>
             )}
           </div>
@@ -803,7 +951,9 @@ export default function WhatsApp() {
         size="sm"
       >
         <div className="space-y-3">
-          <p className="text-sm text-slate-600 mb-4">Selecione o status das conversas:</p>
+          <p className="text-sm text-slate-600 mb-4">
+            Selecione o status das conversas:
+          </p>
           {[
             { value: "todas", label: "Todas", icon: MessageSquare },
             { value: "aberta", label: "Novas/Abertas", icon: MessageSquare },
@@ -850,10 +1000,14 @@ export default function WhatsApp() {
         size="md"
       >
         <div className="space-y-3 max-h-96 overflow-y-auto">
-          <p className="text-sm text-slate-600 mb-4">Selecione o cliente para vincular a esta conversa:</p>
-          
+          <p className="text-sm text-slate-600 mb-4">
+            Selecione o cliente para vincular a esta conversa:
+          </p>
+
           {clientes.length === 0 ? (
-            <p className="text-center text-slate-500 py-4">Nenhum cliente cadastrado</p>
+            <p className="text-center text-slate-500 py-4">
+              Nenhum cliente cadastrado
+            </p>
           ) : (
             clientes.map((cliente) => (
               <button
@@ -863,8 +1017,12 @@ export default function WhatsApp() {
               >
                 <Avatar name={cliente.nome} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-800 truncate">{cliente.nome}</p>
-                  <p className="text-xs text-slate-500">{cliente.telefone || cliente.email}</p>
+                  <p className="text-sm font-medium text-slate-800 truncate">
+                    {cliente.nome}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {cliente.telefone || cliente.email}
+                  </p>
                 </div>
               </button>
             ))

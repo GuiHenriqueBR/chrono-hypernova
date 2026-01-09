@@ -1,17 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { useWhatsAppStore } from '../../store/whatsappStore';
-import { whatsappService } from '../../services/whatsapp';
-import { QRCodeSVG } from 'qrcode.react';
-import { RefreshCw, LogOut, Smartphone, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import React, { useEffect, useState } from "react";
+import { useWhatsAppStore } from "../../store/whatsappStore";
+import { whatsappService } from "../../services/whatsapp";
+import {
+  RefreshCw,
+  LogOut,
+  Smartphone,
+  AlertCircle,
+  CheckCircle2,
+} from "lucide-react";
+import { toast } from "react-hot-toast";
 
 export const WhatsAppConnection: React.FC = () => {
-  const { connectionState, fetchConnectionStatus, isLoadingConnection } = useWhatsAppStore();
+  const { connectionState, fetchConnectionStatus, isLoadingConnection } =
+    useWhatsAppStore();
   const [isRestarting, setIsRestarting] = useState(false);
 
   useEffect(() => {
     fetchConnectionStatus();
-    
+
     // Polling para verificar status periodicamente se não estiver conectado
     const interval = setInterval(() => {
       if (!connectionState?.conectado) {
@@ -20,17 +26,18 @@ export const WhatsAppConnection: React.FC = () => {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [connectionState?.conectado, fetchConnectionStatus]);
 
   const handleDisconnect = async () => {
-    if (!window.confirm('Tem certeza que deseja desconectar o WhatsApp?')) return;
-    
+    if (!window.confirm("Tem certeza que deseja desconectar o WhatsApp?"))
+      return;
+
     try {
       await whatsappService.disconnect();
-      toast.success('WhatsApp desconectado');
+      toast.success("WhatsApp desconectado");
       fetchConnectionStatus();
-    } catch (error) {
-      toast.error('Erro ao desconectar');
+    } catch {
+      toast.error("Erro ao desconectar");
     }
   };
 
@@ -38,17 +45,21 @@ export const WhatsAppConnection: React.FC = () => {
     setIsRestarting(true);
     try {
       await whatsappService.restart();
-      toast.success('Instância reiniciada');
+      toast.success("Instância reiniciada");
       setTimeout(fetchConnectionStatus, 3000);
-    } catch (error) {
-      toast.error('Erro ao reiniciar');
+    } catch {
+      toast.error("Erro ao reiniciar");
     } finally {
       setIsRestarting(false);
     }
   };
 
   if (isLoadingConnection && !connectionState) {
-    return <div className="p-8 text-center text-gray-500">Carregando status do WhatsApp...</div>;
+    return (
+      <div className="p-8 text-center text-gray-500">
+        Carregando status do WhatsApp...
+      </div>
+    );
   }
 
   return (
@@ -58,15 +69,17 @@ export const WhatsAppConnection: React.FC = () => {
           <Smartphone className="w-6 h-6 text-green-600" />
           Conexão WhatsApp
         </h2>
-        
+
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={handleRestart}
             disabled={isRestarting}
             className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
             title="Reiniciar Instância"
           >
-            <RefreshCw className={`w-5 h-5 ${isRestarting ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`w-5 h-5 ${isRestarting ? "animate-spin" : ""}`}
+            />
           </button>
         </div>
       </div>
@@ -77,15 +90,22 @@ export const WhatsAppConnection: React.FC = () => {
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-12 h-12 text-green-600" />
             </div>
-            <h3 className="text-xl font-medium text-gray-900">WhatsApp Conectado!</h3>
+            <h3 className="text-xl font-medium text-gray-900">
+              WhatsApp Conectado!
+            </h3>
             <p className="text-gray-500 max-w-md mx-auto">
-              Seu WhatsApp está conectado e sincronizado. As mensagens serão recebidas e enviadas automaticamente através do CRM.
+              Seu WhatsApp está conectado e sincronizado. As mensagens serão
+              recebidas e enviadas automaticamente através do CRM.
             </p>
-            
+
             {connectionState.nome && (
               <div className="bg-gray-50 p-4 rounded-lg mt-4 inline-block">
-                <p className="text-sm font-medium text-gray-700">{connectionState.nome}</p>
-                <p className="text-xs text-gray-500">{connectionState.numero}</p>
+                <p className="text-sm font-medium text-gray-700">
+                  {connectionState.nome}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {connectionState.numero}
+                </p>
               </div>
             )}
 
@@ -102,15 +122,28 @@ export const WhatsAppConnection: React.FC = () => {
         ) : (
           <div className="text-center space-y-6">
             <div className="space-y-2">
-              <h3 className="text-lg font-medium text-gray-900">Escaneie o QR Code</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                Escaneie o QR Code
+              </h3>
               <p className="text-sm text-gray-500">
-                Abra o WhatsApp no seu celular, vá em Aparelhos Conectados e escaneie o código abaixo.
+                Abra o WhatsApp no seu celular, vá em Aparelhos Conectados e
+                escaneie o código abaixo.
               </p>
             </div>
 
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 inline-block">
               {connectionState?.qrcode ? (
-                <QRCodeSVG value={connectionState.qrcode} size={250} level="H" />
+                <div className="flex justify-center bg-white p-2">
+                  <img
+                    src={
+                      connectionState.qrcode.startsWith("data:")
+                        ? connectionState.qrcode
+                        : `data:image/png;base64,${connectionState.qrcode}`
+                    }
+                    alt="QR Code WhatsApp"
+                    className="w-[250px] h-[250px] object-contain"
+                  />
+                </div>
               ) : (
                 <div className="w-[250px] h-[250px] bg-gray-100 flex items-center justify-center rounded-lg text-gray-400">
                   <div className="text-center">
@@ -123,7 +156,9 @@ export const WhatsAppConnection: React.FC = () => {
 
             {connectionState?.pairingCode && (
               <div className="mt-4">
-                <p className="text-sm text-gray-500 mb-1">Ou use o código de pareamento:</p>
+                <p className="text-sm text-gray-500 mb-1">
+                  Ou use o código de pareamento:
+                </p>
                 <code className="bg-gray-100 px-3 py-1 rounded text-lg font-mono tracking-wider">
                   {connectionState.pairingCode}
                 </code>
@@ -131,8 +166,11 @@ export const WhatsAppConnection: React.FC = () => {
             )}
 
             <div className="flex items-center justify-center gap-2 text-sm text-orange-600 bg-orange-50 px-4 py-2 rounded-md max-w-md mx-auto">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <p>Mantenha seu celular conectado à internet para garantir o funcionamento.</p>
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <p>
+                Mantenha seu celular conectado à internet para garantir o
+                funcionamento.
+              </p>
             </div>
           </div>
         )}
