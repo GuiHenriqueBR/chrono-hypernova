@@ -848,6 +848,18 @@ router.get(
         error.response?.data || error.message
       );
 
+      // Checar erro de conexao
+      if (!error.response && error.code) {
+        return res.status(502).json({
+          success: false,
+          conectado: false,
+          estado: "erro_conexao",
+          error: "Erro de conexao com Evolution API",
+          detalhes: `Nao foi possivel conectar em ${EVOLUTION_API_URL}. Erro: ${error.code}`,
+          instancia: EVOLUTION_INSTANCE,
+        });
+      }
+
       // Se a instancia nao existir, tentar criar
       if (
         error.response?.status === 404 ||
@@ -934,6 +946,15 @@ router.post(
       const errorData = error.response?.data || error.message;
       logger.error("Erro ao reiniciar:", errorData);
 
+      // Checar erro de conexao
+      if (!error.response && error.code) {
+        return res.status(502).json({
+          error: "Erro de conexao com Evolution API",
+          detalhes: `Nao foi possivel conectar em ${EVOLUTION_API_URL}. Verifique a variavel EVOLUTION_API_URL. Erro: ${error.code}`,
+          url: EVOLUTION_API_URL,
+        });
+      }
+
       // Se a instancia nao existir (404), tentar criar
       if (
         error.response?.status === 404 ||
@@ -959,6 +980,13 @@ router.post(
             "Erro ao criar instancia (fallback restart):",
             createError.response?.data || createError.message
           );
+
+          return res.status(500).json({
+            error: "Falha ao criar instancia apos 404",
+            detalhes:
+              createError.response?.data?.message || createError.message,
+            tentativa: "Criacao automatica falhou",
+          });
         }
       }
 
