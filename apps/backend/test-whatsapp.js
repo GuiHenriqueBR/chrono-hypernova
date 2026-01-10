@@ -48,6 +48,31 @@ async function testWhatsApp() {
         JSON.stringify(qrData, null, 2)
       );
 
+      // Se estiver 'connecting' mas sem QR Code, pode estar travado
+      if (qrData.estado === "connecting" && !qrData.qrcode) {
+        console.log(
+          "!!! Instance seems stuck in 'connecting' without QR Code. Attempting HARD RESET..."
+        );
+        const resetRes = await fetch(`${endpoint}/whatsapp/hard-reset`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        console.log("Hard Reset Response:", await resetRes.text());
+
+        console.log("Waiting for cleanup...");
+        await new Promise((r) => setTimeout(r, 3000));
+
+        console.log("Retrying QR Code fetch...");
+        const qrRes2 = await fetch(`${endpoint}/whatsapp/qrcode`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const qrData2 = await qrRes2.json();
+        console.log(
+          "Retry QR Code Response:",
+          JSON.stringify(qrData2, null, 2)
+        );
+      }
+
       console.log("4. Checking Status again...");
       await new Promise((r) => setTimeout(r, 2000)); // Wait for creation
       const statusRes2 = await fetch(`${endpoint}/whatsapp/status`, {

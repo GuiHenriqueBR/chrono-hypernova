@@ -1035,6 +1035,43 @@ router.post(
   })
 );
 
+// Hard Reset - Deletar instancia para recriar
+router.post(
+  "/hard-reset",
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      logger.info(`Solicitando exclusao da instancia ${EVOLUTION_INSTANCE}...`);
+      await evolutionApi.delete(`/instance/delete/${EVOLUTION_INSTANCE}`);
+
+      // Limpar dados locais tambem? Por enquanto nao, apenas resetar a sessao no Evolution
+
+      res.json({
+        success: true,
+        mensagem:
+          "Instancia deletada com sucesso. Ela sera recriada na proxima tentativa de conexao.",
+      });
+    } catch (error: any) {
+      logger.error(
+        "Erro ao deletar instancia (Hard Reset):",
+        error.response?.data || error.message
+      );
+
+      // Se der 404, ja esta deletada
+      if (error.response?.status === 404) {
+        return res.json({
+          success: true,
+          mensagem: "Instancia ja nao existia.",
+        });
+      }
+
+      res.status(500).json({
+        error: "Erro ao realizar hard reset",
+        detalhes: error.response?.data?.message || error.message,
+      });
+    }
+  })
+);
+
 // Informacoes da instancia conectada
 router.get(
   "/info",
