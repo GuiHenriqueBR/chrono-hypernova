@@ -787,6 +787,43 @@ router.post(
     }
   })
 );
+// Diagnostico da conexao
+router.get(
+  "/diagnose",
+  asyncHandler(async (req: Request, res: Response) => {
+    const diagnostic = {
+      config: {
+        EVOLUTION_API_URL,
+        EVOLUTION_INSTANCE,
+        NODE_ENV: process.env.NODE_ENV,
+        hasKey: !!EVOLUTION_API_KEY,
+      },
+      connection: {
+        status: "checking",
+        error: null as any,
+        latency: 0,
+      },
+    };
+
+    const start = Date.now();
+    try {
+      // Tentar listar instancias como teste de conexao
+      await evolutionApi.get("/instance/fetchInstances", { timeout: 5000 });
+      diagnostic.connection.status = "connected";
+    } catch (error: any) {
+      diagnostic.connection.status = "failed";
+      diagnostic.connection.error = {
+        code: error.code,
+        message: error.message,
+        response: error.response?.data,
+      };
+    } finally {
+      diagnostic.connection.latency = Date.now() - start;
+    }
+
+    res.json(diagnostic);
+  })
+);
 
 // Obter QR Code para conexao
 router.get(

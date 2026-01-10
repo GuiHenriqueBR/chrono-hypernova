@@ -18,7 +18,13 @@ async function testWhatsApp() {
     const token = loginData.token;
     console.log("Login OK.");
 
-    console.log("2. Checking WhatsApp Status...");
+    console.log("2. Running Diagnostics...");
+    const diagRes = await fetch(`${endpoint}/whatsapp/diagnose`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    console.log("Diagnostics:", await diagRes.text());
+
+    console.log("3. Checking WhatsApp Status...");
     const statusRes = await fetch(`${endpoint}/whatsapp/status`, {
       headers: { Authorization: `Bearer ${token}` },
     });
