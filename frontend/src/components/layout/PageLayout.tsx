@@ -34,7 +34,7 @@ export function PageLayout({
       />
 
       {/* Main Content */}
-      <div className="lg:ml-[280px]">
+      <div className="lg:ml-70">
         {/* Header */}
         <Header
           title={title}

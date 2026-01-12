@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import path from "path";
 
 // Load environment variables from backend .env
-dotenv.config({ path: path.join(__dirname, "../backend/.env") });
+dotenv.config({ path: path.join(__dirname, "../apps/backend/.env") });
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -48,11 +48,15 @@ async function createUsers() {
       // First check if exists to avoid error? createUser returns error if exists.
       let userId = "";
 
-      /* 21031972 */
-      let password = "";
-      if (user.email.includes("selma")) password = "21031972";
-      if (user.email.includes("financeiro")) password = "13121972";
-      if (user.email.includes("vendas")) password = "23042002";
+      const passwordEnvKey = `PASSWORD_${user.email.split("@")[0].toUpperCase()}`;
+      const password = process.env[passwordEnvKey];
+
+      if (!password) {
+        console.error(
+          `Missing ${passwordEnvKey} env var for ${user.email}. Refusing to create/update user with hardcoded password.`
+        );
+        continue;
+      }
 
       const { data: authData, error: authError } =
         await supabase.auth.admin.createUser({

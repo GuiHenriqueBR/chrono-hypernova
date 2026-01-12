@@ -107,15 +107,41 @@ export default function Financeiro() {
     useFinanceiroCharts(periodoFiltro);
   const { data: projecaoData, isLoading: projecaoLoading } =
     useProjecaoFluxoCaixa(projecaoMeses);
-  const {
-    data: comissoesData,
-    isLoading,
-    error,
-  } = useComissoes(
-    filterStatus !== "todos"
-      ? { status: filterStatus as StatusComissao }
-      : undefined
-  );
+
+  // Calcular datas do filtro
+  const { inicio, fim } = useMemo(() => {
+    const now = new Date();
+    if (periodoFiltro === "mes") {
+      return {
+        inicio: format(startOfMonth(now), "yyyy-MM-dd"),
+        fim: format(endOfMonth(now), "yyyy-MM-dd"),
+      };
+    }
+    if (periodoFiltro === "trimestre") {
+      return {
+        inicio: format(startOfQuarter(now), "yyyy-MM-dd"),
+        fim: format(endOfQuarter(now), "yyyy-MM-dd"),
+      };
+    }
+    if (periodoFiltro === "ano") {
+      return {
+        inicio: format(startOfYear(now), "yyyy-MM-dd"),
+        fim: format(endOfYear(now), "yyyy-MM-dd"),
+      };
+    }
+    // "todos"
+    return { inicio: undefined, fim: undefined };
+  }, [periodoFiltro]);
+
+  const filters = useMemo(() => {
+    const f: any = {};
+    if (filterStatus !== "todos") f.status = filterStatus;
+    if (inicio) f.inicio = inicio;
+    if (fim) f.fim = fim;
+    return f;
+  }, [filterStatus, inicio, fim]);
+
+  const { data: comissoesData, isLoading, error } = useComissoes(filters);
   const { data: apolicesData } = useApolices();
   const createComissao = useCreateComissao();
   const deleteComissao = useDeleteComissao();
@@ -505,7 +531,7 @@ export default function Financeiro() {
                   </h3>
                 </div>
                 {chartsLoading ? (
-                  <div className="flex items-center justify-center h-[200px]">
+                  <div className="flex items-center justify-center h-50">
                     <Skeleton height={160} width={160} />
                   </div>
                 ) : (
@@ -583,7 +609,7 @@ export default function Financeiro() {
                   </h3>
                 </div>
                 {chartsLoading ? (
-                  <div className="flex items-center justify-center h-[180px]">
+                  <div className="flex items-center justify-center h-45">
                     <Skeleton height={140} width={140} />
                   </div>
                 ) : (
@@ -1035,7 +1061,7 @@ export default function Financeiro() {
                                     ) : (
                                       <Clock className="w-3 h-3 text-amber-600" />
                                     )}
-                                    <span className="text-slate-600 truncate max-w-[300px]">
+                                    <span className="text-slate-600 truncate max-w-75">
                                       {detalhe.descricao}
                                     </span>
                                   </div>

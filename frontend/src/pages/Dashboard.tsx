@@ -468,7 +468,7 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : focoDoDia?.itens && focoDoDia.itens.length > 0 ? (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                <div className="space-y-2 max-h-100 overflow-y-auto pr-2">
                   {focoDoDia.itens.map((item) => (
                     <FocoDoDiaCard
                       key={item.id}
@@ -576,7 +576,7 @@ export default function Dashboard() {
                 </h3>
               </div>
               {chartsLoading ? (
-                <div className="flex items-center justify-center h-[140px]">
+                <div className="flex items-center justify-center h-35">
                   <Skeleton height={140} width={140} />
                 </div>
               ) : (

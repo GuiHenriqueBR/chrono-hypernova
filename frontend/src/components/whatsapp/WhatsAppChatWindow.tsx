@@ -1,19 +1,27 @@
-import React, { useRef, useEffect } from 'react';
-import { WhatsAppMessage } from '../../services/whatsapp';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Check, CheckCheck, FileText, Image as ImageIcon, Mic } from 'lucide-react';
+import React, { useRef, useEffect } from "react";
+import { WhatsAppMessage } from "../../services/whatsapp";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import {
+  Check,
+  CheckCheck,
+  FileText,
+  Image as ImageIcon,
+  Mic,
+} from "lucide-react";
 
 interface WhatsAppChatWindowProps {
   messages: WhatsAppMessage[];
   currentUserId?: string; // Para identificar mensagens enviadas por mim
 }
 
-export const WhatsAppChatWindow: React.FC<WhatsAppChatWindowProps> = ({ messages }) => {
+export const WhatsAppChatWindow: React.FC<WhatsAppChatWindowProps> = ({
+  messages,
+}) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -22,22 +30,22 @@ export const WhatsAppChatWindow: React.FC<WhatsAppChatWindowProps> = ({ messages
 
   const renderMessageContent = (message: WhatsAppMessage) => {
     switch (message.tipo) {
-      case 'imagem':
+      case "imagem":
         return (
           <div className="space-y-2">
-            <img 
-              src={message.media_url} 
-              alt="Mídia" 
+            <img
+              src={message.media_url}
+              alt="Mídia"
               className="max-w-xs sm:max-w-sm rounded-lg cursor-pointer hover:opacity-95 transition-opacity"
-              onClick={() => window.open(message.media_url, '_blank')}
+              onClick={() => window.open(message.media_url, "_blank")}
             />
-            {message.conteudo && message.conteudo !== '[Midia]' && (
+            {message.conteudo && message.conteudo !== "[Midia]" && (
               <p className="text-sm">{message.conteudo}</p>
             )}
           </div>
         );
-      
-      case 'documento':
+
+      case "documento":
         return (
           <div className="flex items-center gap-3 bg-black/5 p-3 rounded-lg max-w-xs">
             <div className="bg-red-500 p-2 rounded text-white">
@@ -45,9 +53,9 @@ export const WhatsAppChatWindow: React.FC<WhatsAppChatWindowProps> = ({ messages
             </div>
             <div className="flex-1 overflow-hidden">
               <p className="text-sm font-medium truncate">{message.conteudo}</p>
-              <a 
-                href={message.media_url} 
-                target="_blank" 
+              <a
+                href={message.media_url}
+                target="_blank"
                 rel="noreferrer"
                 className="text-xs text-blue-600 hover:underline"
               >
@@ -57,9 +65,9 @@ export const WhatsAppChatWindow: React.FC<WhatsAppChatWindowProps> = ({ messages
           </div>
         );
 
-      case 'audio':
+      case "audio":
         return (
-          <div className="min-w-[200px]">
+          <div className="min-w-50">
             <audio controls className="w-full h-8">
               <source src={message.media_url} type="audio/ogg" />
               <source src={message.media_url} type="audio/mpeg" />
@@ -69,20 +77,26 @@ export const WhatsAppChatWindow: React.FC<WhatsAppChatWindowProps> = ({ messages
         );
 
       default:
-        return <p className="text-sm whitespace-pre-wrap break-words">{message.conteudo}</p>;
+        return (
+          <p className="text-sm whitespace-pre-wrap break-words">
+            {message.conteudo}
+          </p>
+        );
     }
   };
 
-  const renderStatus = (status: WhatsAppMessage['status']) => {
+  const renderStatus = (status: WhatsAppMessage["status"]) => {
     switch (status) {
-      case 'lida':
+      case "lida":
         return <CheckCheck className="w-3.5 h-3.5 text-blue-500" />;
-      case 'entregue':
+      case "entregue":
         return <CheckCheck className="w-3.5 h-3.5 text-gray-400" />;
-      case 'enviada':
+      case "enviada":
         return <Check className="w-3.5 h-3.5 text-gray-400" />;
       default:
-        return <div className="w-3 h-3 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />;
+        return (
+          <div className="w-3 h-3 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+        );
     }
   };
 
@@ -102,8 +116,8 @@ export const WhatsAppChatWindow: React.FC<WhatsAppChatWindowProps> = ({ messages
 
   // Agrupar mensagens por data
   const groupedMessages: { [key: string]: WhatsAppMessage[] } = {};
-  messages.forEach(msg => {
-    const date = format(new Date(msg.timestamp), 'yyyy-MM-dd');
+  messages.forEach((msg) => {
+    const date = format(new Date(msg.timestamp), "yyyy-MM-dd");
     if (!groupedMessages[date]) groupedMessages[date] = [];
     groupedMessages[date].push(msg);
   });
@@ -120,24 +134,24 @@ export const WhatsAppChatWindow: React.FC<WhatsAppChatWindowProps> = ({ messages
 
           <div className="space-y-1">
             {msgs.map((msg) => {
-              const isMine = msg.direcao === 'enviada';
-              
+              const isMine = msg.direcao === "enviada";
+
               return (
-                <div 
-                  key={msg.id} 
-                  className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+                <div
+                  key={msg.id}
+                  className={`flex ${isMine ? "justify-end" : "justify-start"}`}
                 >
-                  <div 
+                  <div
                     className={`
                       relative max-w-[85%] sm:max-w-[70%] rounded-lg px-3 py-2 shadow-sm
-                      ${isMine ? 'bg-[#d9fdd3] rounded-tr-none' : 'bg-white rounded-tl-none'}
+                      ${isMine ? "bg-[#d9fdd3] rounded-tr-none" : "bg-white rounded-tl-none"}
                     `}
                   >
                     {renderMessageContent(msg)}
-                    
+
                     <div className="flex items-center justify-end gap-1 mt-1 -mb-1">
                       <span className="text-[10px] text-gray-500">
-                        {format(new Date(msg.timestamp), 'HH:mm')}
+                        {format(new Date(msg.timestamp), "HH:mm")}
                       </span>
                       {isMine && renderStatus(msg.status)}
                     </div>

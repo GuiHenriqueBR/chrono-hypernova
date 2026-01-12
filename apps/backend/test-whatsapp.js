@@ -1,4 +1,17 @@
-const endpoint = "https://chrono-backend-production.up.railway.app/api";
+const endpoint = process.env.API_BASE_URL;
+
+const adminEmail = process.env.ADMIN_EMAIL;
+const adminPassword = process.env.ADMIN_PASSWORD;
+
+if (!endpoint) {
+  console.error("Missing API_BASE_URL env var (ex: https://<domain>/api)");
+  process.exit(1);
+}
+
+if (!adminEmail || !adminPassword) {
+  console.error("Missing ADMIN_EMAIL or ADMIN_PASSWORD env vars.");
+  process.exit(1);
+}
 
 async function testWhatsApp() {
   try {
@@ -6,7 +19,7 @@ async function testWhatsApp() {
     const loginRes = await fetch(`${endpoint}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "admin@chrono.com", password: "admin123" }),
+      body: JSON.stringify({ email: adminEmail, password: adminPassword }),
     });
 
     if (!loginRes.ok) {

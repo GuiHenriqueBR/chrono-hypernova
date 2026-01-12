@@ -625,6 +625,9 @@ router.post(
     try {
       // Verificar se API key esta configurada
       if (!process.env.GEMINI_API_KEY) {
+        logger.warn(
+          "GEMINI_API_KEY nao configurada. Usando MOCK DATA para extracao de documentos."
+        );
         fs.unlinkSync(filePath);
 
         const mockData = MOCK_DATA[tipoDocumento] || MOCK_DATA["identificar"];

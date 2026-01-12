@@ -3,31 +3,28 @@ import { authenticate, AuthRequest } from "../middleware/auth";
 import { asyncHandler } from "../middleware/errorHandler";
 import { supabase } from "../services/supabase";
 import { logger } from "../utils/logger";
+import {
+  evolutionApi,
+  EVOLUTION_INSTANCE,
+  EVOLUTION_API_URL,
+  EVOLUTION_API_KEY,
+} from "../services/evolution";
 import axios from "axios";
 
 const router = express.Router();
-
-// Configuracao da Evolution API (WhatsApp)
-const isProduction = process.env.NODE_ENV === "production";
-const EVOLUTION_API_URL =
-  process.env.EVOLUTION_API_URL ||
-  (isProduction ? "http://evolution-api:8080" : "http://localhost:8080");
-const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || "";
-const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE || "corretora";
-
-// Helper para chamadas a Evolution API
-const evolutionApi = axios.create({
-  baseURL: EVOLUTION_API_URL,
-  headers: {
-    apikey: EVOLUTION_API_KEY,
-    "Content-Type": "application/json",
-  },
-});
 
 // Webhook para receber mensagens do WhatsApp
 router.post(
   "/webhook",
   asyncHandler(async (req: Request, res: Response) => {
+    const webhookSecret = process.env.WHATSAPP_WEBHOOK_SECRET;
+    if (webhookSecret) {
+      const received = (req.header("x-webhook-secret") || "").trim();
+      if (!received || received !== webhookSecret) {
+        return res.status(401).json({ error: "Webhook nao autorizado" });
+      }
+    }
+
     const { event, data, instance } = req.body;
 
     logger.info("Webhook WhatsApp recebido:", { event, instance });
@@ -35,9 +32,14 @@ router.post(
     if (event === "messages.upsert") {
       const message = data.message;
       const remoteJid = message.key.remoteJid;
-      const telefone = remoteJid
+      // Normalizar telefone: remover @s.whatsapp.net e caracteres não numéricos
+      let telefone = remoteJid
         .replace("@s.whatsapp.net", "")
-        .replace("@g.us", "");
+        .replace("@g.us", "")
+        .replace(/\D/g, "");
+
+      // Se tiver 13 digitos com 55 (ex: 5511999998888), manter. Se nao, tratar conformidade.
+
       const isFromMe = message.key.fromMe;
       const messageText =
         message.message?.conversation ||
@@ -45,6 +47,7 @@ router.post(
         "[Midia]";
 
       // Buscar ou criar conversa
+      // Tenta match exato primeiro
       let { data: conversa } = await supabase
         .from("whatsapp_conversas")
         .select("*")
@@ -53,18 +56,47 @@ router.post(
 
       if (!conversa) {
         // Tentar vincular com cliente existente
-        const { data: cliente } = await supabase
+        // Melhoria: Tentar match pelos ultimos 9 digitos (celular + DDD) ou 10/11 digitos limpos
+        // Buscar clientes que tenham esse telefone no final
+
+        let clienteId = null;
+        let clienteNome = null;
+
+        // Estrategia de Match mais robusta:
+        // 1. Tentar match exato nos clientes
+        const { data: clienteExato } = await supabase
           .from("clientes")
           .select("id, nome")
-          .ilike("telefone", `%${telefone.slice(-8)}%`)
+          .eq("telefone", telefone) // Assumindo que telefone no banco esta limpo
           .single();
+
+        if (clienteExato) {
+          clienteId = clienteExato.id;
+          clienteNome = clienteExato.nome;
+        } else {
+          // 2. Tentar match flexivel (ultimos 9 digitos - ddd + numero)
+          const ultimosDigitos = telefone.slice(-9);
+          if (ultimosDigitos.length >= 8) {
+            const { data: clienteFlex } = await supabase
+              .from("clientes")
+              .select("id, nome")
+              .ilike("telefone", `%${ultimosDigitos}%`)
+              .limit(1)
+              .single();
+
+            if (clienteFlex) {
+              clienteId = clienteFlex.id;
+              clienteNome = clienteFlex.nome;
+            }
+          }
+        }
 
         const { data: novaConversa } = await supabase
           .from("whatsapp_conversas")
           .insert({
             telefone,
-            cliente_id: cliente?.id || null,
-            nome_contato: cliente?.nome || message.pushName || telefone,
+            cliente_id: clienteId,
+            nome_contato: clienteNome || message.pushName || telefone,
             ultima_mensagem: messageText,
             ultima_mensagem_data: new Date().toISOString(),
             nao_lidas: isFromMe ? 0 : 1,
@@ -104,6 +136,30 @@ router.post(
         status: isFromMe ? "enviada" : "recebida",
         timestamp: new Date(message.messageTimestamp * 1000).toISOString(),
       });
+    }
+
+    // Tratamento de atualizacao de status (ACK)
+    if (event === "messages.update") {
+      for (const update of data) {
+        const { key, update: msgUpdate } = update;
+        if (key?.id && msgUpdate?.status) {
+          const statusMap: Record<string, string> = {
+            PENDING: "enviando",
+            SERVER_ACK: "enviada",
+            DELIVERY_ACK: "entregue",
+            READ: "lida",
+            PLAYED: "lida",
+          };
+
+          const novoStatus =
+            statusMap[msgUpdate.status] || msgUpdate.status.toLowerCase();
+
+          await supabase
+            .from("whatsapp_mensagens")
+            .update({ status: novoStatus })
+            .eq("message_id", key.id);
+        }
+      }
     }
 
     res.json({ success: true });
@@ -903,32 +959,82 @@ router.get(
         error.response?.data?.error?.includes("not found")
       ) {
         try {
-          // Criar instancia
+          const webhookUrl =
+            process.env.WHATSAPP_WEBHOOK_URL?.trim() ||
+            (process.env.BACKEND_URL?.trim()
+              ? `${process.env.BACKEND_URL.trim()}/api/whatsapp/webhook`
+              : undefined);
+
+          if (!webhookUrl) {
+            logger.warn(
+              "CRIANDO INSTANCIA SEM WEBHOOK! As mensagens recebidas NAO serao salvas. Configure WHATSAPP_WEBHOOK_URL ou BACKEND_URL."
+            );
+          } else {
+            logger.info(`Criando instancia com webhook: ${webhookUrl}`);
+          }
+
+          // Criar instancia com Webhook configurado
           await evolutionApi.post("/instance/create", {
             instanceName: EVOLUTION_INSTANCE,
             qrcode: true,
             integration: "WHATSAPP-BAILEYS",
+            webhook: webhookUrl,
+            webhook_by_events: true,
+            events: [
+              "MESSAGES_UPSERT",
+              "MESSAGES_UPDATE",
+              "MESSAGES_DELETE",
+              "SEND_MESSAGE",
+              "CONNECTION_UPDATE",
+            ],
           });
 
-          // Buscar QR Code da nova instancia
-          const qrResponse = await evolutionApi.get(
-            `/instance/connect/${EVOLUTION_INSTANCE}`
-          );
+          // Retry pattern para buscar QR Code (max 5 tentativas)
+          let qrCodeData = null;
+          let attempts = 0;
 
-          return res.json({
-            success: true,
-            conectado: false,
-            estado: "aguardando_qr",
-            qrcode: qrResponse.data?.base64 || qrResponse.data?.qrcode?.base64,
-            pairingCode: qrResponse.data?.pairingCode,
-            instancia: EVOLUTION_INSTANCE,
-            mensagem: "Instancia criada, escaneie o QR Code",
-          });
+          while (!qrCodeData && attempts < 5) {
+            attempts++;
+            await new Promise((r) => setTimeout(r, 1000)); // Esperar 1s entre tentativas
+
+            try {
+              const qrRes = await evolutionApi.get(
+                `/instance/connect/${EVOLUTION_INSTANCE}`
+              );
+              if (qrRes.data?.base64 || qrRes.data?.qrcode?.base64) {
+                qrCodeData = qrRes.data;
+              }
+            } catch (e) {
+              // Ignorar erro e tentar novamente
+              logger.debug(
+                `Tentativa ${attempts} de buscar QR falhou, tentando novamente...`
+              );
+            }
+          }
+
+          if (qrCodeData) {
+            return res.json({
+              success: true,
+              conectado: false,
+              estado: "aguardando_qr",
+              qrcode: qrCodeData.base64 || qrCodeData.qrcode?.base64,
+              pairingCode: qrCodeData.pairingCode,
+              instancia: EVOLUTION_INSTANCE,
+              mensagem: "Instancia criada com sucesso",
+            });
+          }
+
+          throw new Error("Timeout ao aguardar geracao do QR Code");
         } catch (createError: any) {
           logger.error(
             "Erro ao criar instancia:",
             createError.response?.data || createError.message
           );
+
+          return res.status(500).json({
+            error: "Falha ao criar e configurar nova instância",
+            detalhes: createError.message,
+          });
         }
       }
 

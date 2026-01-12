@@ -409,7 +409,7 @@ export default function Agenda() {
 
             {view === "lista" && (
               <>
-                <div className="relative flex-1 min-w-[200px] max-w-md">
+                <div className="relative flex-1 min-w-50 max-w-md">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
@@ -533,8 +533,8 @@ export default function Agenda() {
                                     t.concluida
                                       ? "bg-emerald-500 border-emerald-500"
                                       : overdue
-                                      ? "border-red-400 hover:bg-red-100"
-                                      : `border-slate-300 hover:border-violet-400 hover:bg-violet-50`
+                                        ? "border-red-400 hover:bg-red-100"
+                                        : `border-slate-300 hover:border-violet-400 hover:bg-violet-50`
                                   }
                                 `}
                               >
@@ -569,16 +569,16 @@ export default function Agenda() {
                                       overdue
                                         ? "text-red-500 font-medium"
                                         : today
-                                        ? "text-amber-600 font-medium"
-                                        : "text-slate-500"
+                                          ? "text-amber-600 font-medium"
+                                          : "text-slate-500"
                                     }`}
                                   >
                                     <CalendarIcon className="w-3 h-3" />
                                     {overdue
                                       ? "Atrasada - "
                                       : today
-                                      ? "Hoje - "
-                                      : ""}
+                                        ? "Hoje - "
+                                        : ""}
                                     {new Date(
                                       t.data_vencimento
                                     ).toLocaleDateString("pt-BR")}

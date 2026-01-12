@@ -9,7 +9,7 @@ export default defineConfig({
     port: 5173,
     open: true,
   },
-  cacheDir: "C:/temp/vite-cache",
+  cacheDir: "node_modules/.vite",
   optimizeDeps: {
     include: [
       "react",
@@ -21,5 +21,23 @@ export default defineConfig({
       "lucide-react",
       "@supabase/supabase-js",
     ],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom"],
+          router: ["react-router-dom"],
+          query: ["@tanstack/react-query"],
+          supabase: ["@supabase/supabase-js"],
+          motion: ["framer-motion"],
+          icons: ["lucide-react"],
+          dnd: ["@dnd-kit/core", "@dnd-kit/sortable", "@dnd-kit/utilities"],
+          state: ["zustand"],
+          forms: ["react-hook-form", "@hookform/resolvers"],
+          utils: ["date-fns", "zod"],
+        },
+      },
+    },
   },
 });

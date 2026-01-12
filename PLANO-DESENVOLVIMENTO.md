@@ -11,9 +11,11 @@
 Este documento detalha o plano completo para transformar o protótipo atual em um sistema funcional completo de gestão de corretora de seguros, seguindo todas as especificações definidas nos documentos de requisitos.
 
 ### Objetivo Principal
+
 Entregar um sistema SaaS profissional que centralize toda a gestão de uma corretora de seguros brasileira, com integrações de WhatsApp, IA para OCR, e automação de processos.
 
 ### Stack Tecnológico
+
 - **Frontend:** React 18+ + TypeScript + Vite + TailwindCSS + Framer Motion + Zustand + React Query
 - **Backend:** Node.js + Express + TypeScript + Supabase
 - **Integrações:** OpenAI (IA/OCR), Evolution API (WhatsApp), Google Calendar API
@@ -22,83 +24,56 @@ Entregar um sistema SaaS profissional que centralize toda a gestão de uma corre
 
 ## 📊 GAP ANALYSIS - MÓDULOS FALTANTES
 
-### ❌ NÃO IMPLEMENTADO (CRÍTICO)
+### ✅ IMPLEMENTADO / EM REVISÃO
 
 #### 1. WhatsApp CRM Integration
-**Status:** Página listada no sidebar mas não existe
 
-**Funcionalidades Necessárias:**
-- [ ] Lista de conversas de todos os clientes
-- [ ] Chat individual com histórico completo
-- [ ] Sincronização automática via Evolution API
-- [ ] Templates de respostas rápidas
-- [ ] Filtros por status (novo, respondido, arquivado)
-- [ ] Atribuição de conversa para usuário
-- [ ] Métricas (tempo médio resposta, volume de mensagens)
-- [ ] Notificações em tempo real
-- [ ] Integração com cadastro de cliente (linkar conversa)
-- [ ] Upload e envio de documentos via WhatsApp
+**Status:** Implementado (Aguardando Configuração de Ambiente)
 
-**Arquivos a Criar:**
-- `frontend/src/pages/WhatsApp.tsx`
-- `frontend/src/components/WhatsApp/ConversationList.tsx`
-- `frontend/src/components/WhatsApp/ChatWindow.tsx`
-- `frontend/src/components/WhatsApp/MessageBubble.tsx`
-- `frontend/src/components/WhatsApp/QuickReplyTemplates.tsx`
-- `backend/src/routes/whatsapp.ts`
-- `backend/src/services/evolution.ts`
+**Funcionalidades Existentes:**
+
+- Rota backend com webhook (`apps/backend/src/routes/whatsapp.ts`)
+- Lógica de match de cliente (`apps/backend/src/services/whatsapp.ts`)
+- Interface Frontend (`frontend/src/pages/WhatsApp.tsx`)
+
+**Ações Pendentes:**
+
+- Configurar variáveis de ambiente do Evolution API
+- Validar fluxo completo com instância real
 
 ---
 
 #### 2. Importação de Excel
-**Status:** Página listada no sidebar mas não existe
 
-**Funcionalidades Necessárias:**
-- [ ] Upload de arquivo Excel (.xlsx, .csv)
-- [ ] Preview dos dados antes de importar
-- [ ] Mapeamento de colunas (qual coluna = qual campo)
-- [ ] Validação de dados (CPF, email, datas, etc.)
-- [ ] Importação em lote com progress bar
-- [ ] Relatório de sucesso/erros
-- [ ] Opção de rollback
-- [ ] Histórico de todas as importações
-- [ ] Suporte para importar: clientes, apólices, comissões
+**Status:** Implementado (Aguardando Testes de Carga)
 
-**Arquivos a Criar:**
-- `frontend/src/pages/Importacao.tsx`
-- `frontend/src/components/Importacao/FileUpload.tsx`
-- `frontend/src/components/Importacao/ColumnMapper.tsx`
-- `frontend/src/components/Importacao/DataPreview.tsx`
-- `frontend/src/components/Importacao/ImportSummary.tsx`
-- `backend/src/routes/importacao.ts`
-- `backend/src/services/excelParser.ts`
+**Funcionalidades Existentes:**
+
+- Upload e parsing (`frontend/src/components/Importacao/DragDropUpload.tsx`)
+- Rota backend para processamento (`apps/backend/src/routes/importacao.ts`)
+- Serviço de parsing `xlsx`
+
+**Ações Pendentes:**
+
+- Testar persistência em massa no Supabase
+- Validar limits de tamanho de arquivo
 
 ---
 
-#### 3. Backend Completo
-**Status:** Não existe nenhum código backend
+#### 3. Backend Base
 
-**Funcionalidades Necessárias:**
-- [ ] Setup inicial Node.js + Express + TypeScript
-- [ ] Configuração Supabase (database + auth)
-- [ ] APIs para clientes (CRUD completo)
-- [ ] APIs para apólices (CRUD completo)
-- [ ] APIs para sinistros (CRUD completo)
-- [ ] APIs para financeiro (comissões, transações)
-- [ ] APIs para tarefas/agenda
-- [ ] APIs para documentos (upload/download)
-- [ ] Integração Evolution API (webhook, enviar mensagens)
-- [ ] Integração OpenAI (OCR para extração de dados)
-- [ ] Integração Google Calendar (criar eventos)
-- [ ] Autenticação JWT com Supabase
-- [ ] Middleware de autenticação e autorização
-- [ ] Error handling global
-- [ ] Logging com Winston
-- [ ] Rate limiting
-- [ ] CORS configuration
-- [ ] Validation com Zod
+**Status:** Implementado
+
+**Funcionalidades Existentes:**
+
+- Node.js + Express + TypeScript configurado
+- Estrutura de rotas, controllers e services
+- Integração Supabase (cliente configurado)
+
+### ⚠️ PENDÊNCIAS CRÍTICAS (GAP REAL)
 
 **Arquivos a Criar:**
+
 ```
 backend/
 ├── src/
@@ -145,12 +120,15 @@ backend/
 ### ⚠️ MÓDULOS EXISTENTES - INCOMPLETOS
 
 #### 4. Clientes - Incompleto
+
 **✅ Implementado:**
+
 - Listagem com cards
 - Busca por nome/CPF/email
 - Modal cadastro básico PF/PJ
 
 **❌ Faltando:**
+
 - [ ] **Dashboard detalhado do cliente** (CRÍTICO)
   - Todas as apólices ativas
   - Histórico completo de sinistros
@@ -167,6 +145,7 @@ backend/
 - [ ] Integração real com backend
 
 **Arquivos a Criar:**
+
 - `frontend/src/pages/ClienteDetalhes.tsx`
 - `frontend/src/components/Cliente/ClienteDashboard.tsx`
 - `frontend/src/components/Cliente/ApolicesList.tsx`
@@ -179,12 +158,15 @@ backend/
 ---
 
 #### 5. Apólices - Incompleto
+
 **✅ Implementado:**
+
 - Listagem em tabela
 - Stats por status
 - Modal básico
 
 **❌ Faltando:**
+
 - [ ] **Detalhes completos da apólice**
   - **Coberturas** (limite, franquia, prêmio por cobertura)
   - **Beneficiários**
@@ -200,6 +182,7 @@ backend/
 - [ ] Edição de apólice
 
 **Arquivos a Criar:**
+
 - `frontend/src/pages/ApoliceDetalhes.tsx`
 - `frontend/src/components/Apolice/CoberturasList.tsx`
 - `frontend/src/components/Apolice/BeneficiariosList.tsx`
@@ -212,12 +195,15 @@ backend/
 ---
 
 #### 6. Sinistros - Incompleto
+
 **✅ Implementado:**
+
 - Listagem com cards
 - Status visuais
 - Modal básico
 
 **❌ Faltando:**
+
 - [ ] **Timeline de regulação** (etapas do processo completo)
   - Data recebimento
   - Regulador/Perito atribuído
@@ -236,6 +222,7 @@ backend/
 - [ ] Edição de sinistro
 
 **Arquivos a Criar:**
+
 - `frontend/src/pages/SinistroDetalhes.tsx`
 - `frontend/src/components/Sinistro/TimelineRegulacao.tsx`
 - `frontend/src/components/Sinistro/DocumentosUpload.tsx`
@@ -246,11 +233,14 @@ backend/
 ---
 
 #### 7. Financeiro - Incompleto
+
 **✅ Implementado:**
+
 - Cards com receita, comissões, despesas, lucro
 - Tabela de comissões
 
 **❌ Faltando:**
+
 - [ ] Contas a receber (clientes com parcelas pendentes)
 - [ ] Contas a pagar (comissões a seguradoras, custos operacionais)
 - [ ] Controle de fluxo de caixa detalhado
@@ -264,6 +254,7 @@ backend/
 - [ ] Exportação de relatórios (PDF/Excel)
 
 **Arquivos a Criar:**
+
 - `frontend/src/components/Financeiro/ContasReceber.tsx`
 - `frontend/src/components/Financeiro/ContasPagar.tsx`
 - `frontend/src/components/Financeiro/FluxoCaixa.tsx`
@@ -274,11 +265,14 @@ backend/
 ---
 
 #### 8. Agenda - Incompleto
+
 **✅ Implementado:**
+
 - Tarefas com prioridade
 - Stats básicos
 
 **❌ Faltando:**
+
 - [ ] Integração com Google Calendar
   - OAuth 2.0 authentication
   - Criar eventos automaticamente
@@ -296,6 +290,7 @@ backend/
 - [ ] Priorização de tarefas urgentes
 
 **Arquivos a Criar:**
+
 - `frontend/src/components/Agenda/CalendarView.tsx`
 - `frontend/src/components/Agenda/GoogleCalendarSync.tsx`
 - `frontend/src/components/Agenda/TarefasList.tsx`
@@ -305,13 +300,16 @@ backend/
 ---
 
 #### 9. Dashboard - Incompleto
+
 **✅ Implementado:**
+
 - Stats com cards animados
 - Atividades recentes
 - Renovações próximas
 - Ações rápidas
 
 **❌ Faltando:**
+
 - [ ] Métricas de WhatsApp
   - Mensagens recebidas hoje
   - Tempo médio de resposta
@@ -324,6 +322,7 @@ backend/
 - [ ] KPIs avançados
 
 **Arquivos a Criar:**
+
 - `frontend/src/components/Dashboard/WhatsAppStats.tsx`
 - `frontend/src/components/Dashboard/SUSEPAlerts.tsx`
 - `frontend/src/components/Dashboard/Charts.tsx`
@@ -358,6 +357,7 @@ frontend/src/components/common/
 ### Melhorias de Design Visual
 
 #### O que está bom ✅
+
 - Glassmorphism elegante
 - Gradientes animados no background
 - Animações com Framer Motion
@@ -369,6 +369,7 @@ frontend/src/components/common/
 #### O que pode melhorar 🎨
 
 **1. Cards**
+
 - Adicionar mais hierarchy visual
 - Sombras mais profundas e suaves
 - Estados de focus visíveis
@@ -376,6 +377,7 @@ frontend/src/components/common/
 - Border mais definido
 
 **2. Tabelas**
+
 - Estados de hover mais visíveis
 - Striping (linhas alternadas)
 - Pagination com navegação
@@ -384,6 +386,7 @@ frontend/src/components/common/
 - Ações inline
 
 **3. Formulários**
+
 - Validação visual clara
 - Loading states nos inputs
 - Feedback de sucesso/erro
@@ -392,6 +395,7 @@ frontend/src/components/common/
 - Helper text
 
 **4. Modais**
+
 - Animações de entrada/saída mais fluidas
 - Overlay com blur
 - Esc para fechar
@@ -399,24 +403,28 @@ frontend/src/components/common/
 - Tamanhos responsivos (sm, md, lg, xl)
 
 **5. Empty States**
+
 - Ilustrações SVG customizadas
 - CTAs claros e acionáveis
 - Mensagens contextuais
 - Sugestões de ação
 
 **6. Loading States**
+
 - Skeleton loaders em todas as listas
 - Spinners para operações
 - Progress bars para uploads
 - Skeleton cards para dashboards
 
 **7. Error States**
+
 - Tratamento de erros global
 - Mensagens claras e acionáveis
 - Retry buttons
 - Error boundaries
 
 **8. Mobile Experience**
+
 - Swipe gestures
 - Bottom sheets
 - Floating action buttons
@@ -424,12 +432,14 @@ frontend/src/components/common/
 - Sticky headers
 
 **9. Dark Mode**
+
 - Tema escuro completo
 - Toggle fácil
 - Persistência da preferência
 - Cores otimizadas para contraste
 
 **10. Accessibility**
+
 - Melhorar contraste (WCAG AA)
 - Focus states visíveis
 - Labels ARIA completas
@@ -625,6 +635,7 @@ CREATE TABLE audit_logs (
 **Objetivo:** Criar a base técnica do sistema
 
 **Week 1:**
+
 - [ ] Setup projeto backend (Node.js + Express + TypeScript)
 - [ ] Configurar Supabase (criar projeto, setup database)
 - [ ] Implementar schema SQL completo
@@ -635,6 +646,7 @@ CREATE TABLE audit_logs (
 - [ ] Configurar CORS e rate limiting
 
 **Week 2:**
+
 - [ ] Criar APIs clientes (CRUD completo)
 - [ ] Criar APIs apólices (CRUD completo)
 - [ ] Criar APIs sinistros (CRUD completo)
@@ -646,6 +658,7 @@ CREATE TABLE audit_logs (
 - [ ] Documentação de endpoints (Swagger/OpenAPI)
 
 **Entregáveis:**
+
 - Backend funcional com APIs básicas
 - Documentação de APIs
 - Testes de integração passando
@@ -657,6 +670,7 @@ CREATE TABLE audit_logs (
 **Objetivo:** Tornar os módulos existentes funcionais
 
 **Week 3:**
+
 - [ ] Conectar frontend com backend (todos os módulos)
 - [ ] Implementar ClienteDetalhes com dashboard completo
 - [ ] Adicionar timeline de eventos do cliente
@@ -667,6 +681,7 @@ CREATE TABLE audit_logs (
 - [ ] Adicionar timeline de endossos
 
 **Week 4:**
+
 - [ ] Implementar SinistroDetalhes completo
 - [ ] Adicionar timeline de regulação
 - [ ] Implementar upload de documentos de sinistro
@@ -677,6 +692,7 @@ CREATE TABLE audit_logs (
 - [ ] Melhorar Agenda com Google Calendar
 
 **Entregáveis:**
+
 - Todos os módulos core funcionais
 - Detalhes completos de clientes/apólices/sinistros
 - Financeiro com fluxo de caixa e relatórios
@@ -688,6 +704,7 @@ CREATE TABLE audit_logs (
 **Objetivo:** Implementar diferenciais competitivos
 
 **Week 5:**
+
 - [ ] Criar página WhatsApp/CRM completa
 - [ ] Implementar lista de conversas
 - [ ] Criar chat individual com histórico
@@ -699,6 +716,7 @@ CREATE TABLE audit_logs (
 - [ ] Implementar notificações em tempo real
 
 **Week 6:**
+
 - [ ] Criar página Importação de Excel
 - [ ] Implementar upload de arquivo
 - [ ] Criar preview de dados
@@ -709,6 +727,7 @@ CREATE TABLE audit_logs (
 - [ ] Adicionar histórico de importações
 
 **Entregáveis:**
+
 - Módulo WhatsApp/CRM completo
 - Módulo de Importação de Excel funcional
 - Integrações com APIs externas funcionando
@@ -720,6 +739,7 @@ CREATE TABLE audit_logs (
 **Objetivo:** Implementar IA para OCR e automações
 
 **Week 7:**
+
 - [ ] Implementar integração OpenAI API
 - [ ] Criar endpoint para upload de PDF
 - [ ] Implementar extração de dados de apólice
@@ -729,6 +749,7 @@ CREATE TABLE audit_logs (
 - [ ] Testar OCR com múltiplos formatos
 
 **Week 8:**
+
 - [ ] Implementar automação de renovações (jobs)
 - [ ] Criar alertas automáticos de vencimento
 - [ ] Implementar notificações automáticas
@@ -738,6 +759,7 @@ CREATE TABLE audit_logs (
 - [ ] Adicionar lembretes automáticos
 
 **Entregáveis:**
+
 - IA OCR funcional para apólices
 - Automações de renovações funcionando
 - Integração Google Calendar completa
@@ -749,6 +771,7 @@ CREATE TABLE audit_logs (
 **Objetivo:** Polir experiência do usuário e design
 
 **Week 9:**
+
 - [ ] Criar todos os componentes faltantes do design system
 - [ ] Implementar skeleton loaders em todas as listas
 - [ ] Criar empty states elaborados
@@ -758,6 +781,7 @@ CREATE TABLE audit_logs (
 - [ ] Implementar dark mode completo
 
 **Week 10:**
+
 - [ ] Melhorar accessibility (WCAG AA)
 - [ ] Adicionar focus states visíveis
 - [ ] Implementar keyboard navigation
@@ -769,6 +793,7 @@ CREATE TABLE audit_logs (
 - [ ] Performance optimization
 
 **Entregáveis:**
+
 - Design system completo
 - Accessibility WCAG AA
 - Mobile experience otimizada
@@ -781,6 +806,7 @@ CREATE TABLE audit_logs (
 **Objetivo:** Testar e fazer deploy em produção
 
 **Week 11:**
+
 - [ ] Escrever testes E2E com Playwright
 - [ ] Escrever testes unitários com Vitest
 - [ ] Testar integrações com APIs externas
@@ -791,6 +817,7 @@ CREATE TABLE audit_logs (
 - [ ] Load testing
 
 **Week 12:**
+
 - [ ] Configurar Vercel para frontend
 - [ ] Configurar Railway para backend
 - [ ] Setup environment variables
@@ -802,6 +829,7 @@ CREATE TABLE audit_logs (
 - [ ] Documentation final
 
 **Entregáveis:**
+
 - Sistema em produção
 - Testes passando
 - Documentação completa
@@ -814,6 +842,7 @@ CREATE TABLE audit_logs (
 ### MVP (Semanas 1-6) - Essencial
 
 **Backend:**
+
 - [ ] Setup infraestrutura
 - [ ] Autenticação funcionando
 - [ ] APIs clientes funcionando
@@ -824,6 +853,7 @@ CREATE TABLE audit_logs (
 - [ ] APIs documentos funcionando
 
 **Frontend:**
+
 - [ ] Gestão de clientes funcional
 - [ ] Gestão de apólices funcional
 - [ ] Gestão de sinistros funcional
@@ -834,6 +864,7 @@ CREATE TABLE audit_logs (
 - [ ] Agenda funcional
 
 **Integrações:**
+
 - [ ] WhatsApp/CRM integrado
 - [ ] Importação de Excel funcional
 - [ ] OpenAI OCR básico funcionando
@@ -842,6 +873,7 @@ CREATE TABLE audit_logs (
 ### Fase 2 (Semanas 7-12) - Premium
 
 **Features Avançadas:**
+
 - [ ] IA OCR avançado (treinamento por ramo)
 - [ ] Automação de renovações completa
 - [ ] Chatbot WhatsApp básico
@@ -855,6 +887,7 @@ CREATE TABLE audit_logs (
 ## 🔐 CONSIDERAÇÕES DE SEGURANÇA
 
 ### Autenticação e Autorização
+
 - [ ] OAuth 2.0 via Supabase
 - [ ] JWT tokens com expiração
 - [ ] Row Level Security (RLS) no banco
@@ -862,6 +895,7 @@ CREATE TABLE audit_logs (
 - [ ] MFA (Multi-factor authentication) opcional
 
 ### Proteção de Dados
+
 - [ ] LGPD compliance
 - [ ] Criptografia em trânsito (HTTPS)
 - [ ] Criptografia de campos sensíveis (CPF, CNPJ)
@@ -869,6 +903,7 @@ CREATE TABLE audit_logs (
 - [ ] Audit log de todas as ações
 
 ### APIs e Integrações
+
 - [ ] Rate limiting na Evolution API
 - [ ] Validação de webhooks
 - [ ] Tokens armazenados encriptados
@@ -880,18 +915,21 @@ CREATE TABLE audit_logs (
 ## 📊 MÉTRICAS DE SUCESSO
 
 ### Funcionalidade
+
 - [ ] 100% das apólices cadastradas
 - [ ] 100% dos sinistros com timeline completa
 - [ ] 95%+ de acurácia na IA OCR
 - [ ] Tempo médio de cadastro: <2 minutos
 
 ### Performance
+
 - [ ] Tempo de carregamento página: <2s
 - [ ] Time to Interactive: <3s
 - [ ] Database query: <500ms
 - [ ] Uptime: 99.9%
 
 ### Adoção
+
 - [ ] 100% das apólices migradas
 - [ ] Redução 80% de tempo administrativo
 - [ ] 0 documentos perdidos

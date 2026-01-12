@@ -18,9 +18,9 @@ export function StatusStepper({ steps, className = "" }: StatusStepperProps) {
     <div className={`w-full ${className}`}>
       <div className="relative">
         {/* Progress Line */}
-        <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-200">
+        <div className="absolute top-5 left-0 right-0 h-0.5 bg-neutral-200">
           <div
-            className="h-full bg-violet-500 transition-all duration-500"
+            className="h-full bg-primary-500 transition-all duration-500"
             style={{
               width: `${
                 (steps.filter((s) => s.status === "completed").length /
@@ -45,10 +45,10 @@ export function StatusStepper({ steps, className = "" }: StatusStepperProps) {
                     transition-all duration-300 relative z-10
                     ${
                       step.status === "completed"
-                        ? "bg-emerald-500 text-white"
+                        ? "bg-success-500 text-white"
                         : step.status === "current"
-                        ? "bg-violet-500 text-white"
-                        : "bg-white border-2 border-slate-300 text-slate-400"
+                          ? "bg-primary-500 text-white"
+                          : "bg-white border-2 border-neutral-300 text-neutral-400"
                     }
                   `}
                 >
@@ -71,10 +71,10 @@ export function StatusStepper({ steps, className = "" }: StatusStepperProps) {
                       text-xs font-medium transition-colors
                       ${
                         step.status === "completed"
-                          ? "text-emerald-600"
+                          ? "text-success-600"
                           : step.status === "current"
-                          ? "text-violet-600"
-                          : "text-slate-500"
+                            ? "text-primary-600"
+                            : "text-neutral-500"
                       }
                     `}
                   >
@@ -117,8 +117,8 @@ export function VerticalStepper({
                   step.status === "completed"
                     ? "bg-emerald-500 text-white"
                     : step.status === "current"
-                    ? "bg-violet-500 text-white"
-                    : "bg-white border-2 border-slate-300 text-slate-400"
+                      ? "bg-violet-500 text-white"
+                      : "bg-white border-2 border-slate-300 text-slate-400"
                 }
               `}
             >
@@ -143,8 +143,8 @@ export function VerticalStepper({
                     step.status === "completed"
                       ? "text-emerald-600"
                       : step.status === "current"
-                      ? "text-violet-600"
-                      : "text-slate-700"
+                        ? "text-violet-600"
+                        : "text-slate-700"
                   }
                 `}
               >

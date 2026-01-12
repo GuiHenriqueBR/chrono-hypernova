@@ -16,32 +16,32 @@ interface ButtonProps extends Omit<HTMLMotionProps<"button">, "ref"> {
 
 const variants: Record<ButtonVariant, string> = {
   primary: `
-    bg-gradient-to-r from-violet-600 to-violet-500 
-    hover:from-violet-500 hover:to-violet-400
-    text-white shadow-lg shadow-violet-500/25
-    border border-violet-400/20
+    bg-gradient-to-r from-primary-600 to-primary-500 
+    hover:from-primary-500 hover:to-primary-400
+    text-white shadow-lg shadow-primary-500/25
+    border border-primary-400/20
   `,
   secondary: `
-    bg-gradient-to-r from-cyan-600 to-cyan-500 
-    hover:from-cyan-500 hover:to-cyan-400
-    text-white shadow-lg shadow-cyan-500/25
-    border border-cyan-400/20
+    bg-gradient-to-r from-secondary-600 to-secondary-500 
+    hover:from-secondary-500 hover:to-secondary-400
+    text-white shadow-lg shadow-secondary-500/25
+    border border-secondary-400/20
   `,
   danger: `
-    bg-gradient-to-r from-red-600 to-red-500 
-    hover:from-red-500 hover:to-red-400
-    text-white shadow-lg shadow-red-500/25
-    border border-red-400/20
+    bg-gradient-to-r from-danger-600 to-danger-500 
+    hover:from-danger-500 hover:to-danger-400
+    text-white shadow-lg shadow-danger-500/25
+    border border-danger-400/20
   `,
   ghost: `
-    bg-transparent hover:bg-slate-100
-    text-slate-600 hover:text-slate-900
+    bg-transparent hover:bg-neutral-100
+    text-neutral-600 hover:text-neutral-900
     border border-transparent
   `,
   outline: `
-    bg-transparent hover:bg-slate-50
-    text-slate-600 hover:text-slate-900
-    border border-slate-200 hover:border-slate-300
+    bg-transparent hover:bg-neutral-50
+    text-neutral-600 hover:text-neutral-900
+    border border-neutral-200 hover:border-neutral-300
   `,
 };
 

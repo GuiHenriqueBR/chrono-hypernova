@@ -13,11 +13,11 @@ export function Badge({
   ...rest
 }: BadgeProps) {
   const variantStyles = {
-    success: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
-    warning: "bg-amber-50 text-amber-700 border-amber-200/60",
-    error: "bg-red-50 text-red-700 border-red-200/60",
-    info: "bg-blue-50 text-blue-700 border-blue-200/60",
-    neutral: "bg-slate-50 text-slate-700 border-slate-200/60",
+    success: "bg-success-50 text-success-700 border-success-200/60",
+    warning: "bg-warning-50 text-warning-700 border-warning-200/60",
+    error: "bg-error-50 text-error-700 border-error-200/60",
+    info: "bg-info-50 text-info-700 border-info-200/60",
+    neutral: "bg-neutral-50 text-neutral-700 border-neutral-200/60",
   };
 
   const sizeStyles = {

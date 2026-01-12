@@ -461,4 +461,3 @@ export function KanbanBoard({
 }
 
 // Export column config for use in other components
-// Export column config for use in other components

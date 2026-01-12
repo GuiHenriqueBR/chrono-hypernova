@@ -5,6 +5,7 @@
   "description": "Sistema de Gestao Completo para Corretora de Seguros",
   "workspaces": [
     "apps/backend",
+    "frontend",
     "packages/*"
   ],
   "scripts": {

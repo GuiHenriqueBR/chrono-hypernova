@@ -35,7 +35,10 @@ import { iniciarScheduler } from "./jobs/scheduler";
 
 const app = express();
 app.set("trust proxy", 1); // Trust first proxy (Railway/Nginx)
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT) || 3001;
+const HOST = process.env.HOST || "0.0.0.0";
+const hasSupabaseConfig =
+  !!process.env.SUPABASE_URL && !!process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Request logging - Early logging to capture all requests
 app.use((req, res, next) => {
@@ -55,23 +58,61 @@ app.use(
 );
 
 // CORS
-// Permitir múltiplas origens ou * para debug inicial se necessário
-const allowedOrigins = [
-  process.env.FRONTEND_URL || "http://localhost:5173",
-  "https://chrono-hypernova-ix8qfbbv1-guihenriquebrs-projects.vercel.app",
-  "https://chrono-hypernova.vercel.app",
-];
+// Permitir múltiplas origens configuradas via variáveis de ambiente
+const allowedOrigins = new Set(
+  [
+    process.env.FRONTEND_URL,
+    ...(process.env.FRONTEND_URLS || "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
+  ].filter(Boolean)
+);
+
+// Em desenvolvimento, adiciona localhost
+if (process.env.NODE_ENV !== "production") {
+  allowedOrigins.add("http://localhost:5173");
+  allowedOrigins.add("http://127.0.0.1:5173");
+}
+
+// Log de origens permitidas na inicialização
+logger.info(
+  `[CORS] Origens permitidas: ${JSON.stringify([...allowedOrigins])}`
+);
+logger.info(`[CORS] NODE_ENV: ${process.env.NODE_ENV}`);
 
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Log para debug
+      logger.debug(`[CORS] Requisição de origin: ${origin}`);
+
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      // Durante debug, vamos ser mais permissivos, mas idealmente filtrar
-      // if (allowedOrigins.indexOf(origin) === -1) { ... }
-      callback(null, true);
+
+      if (allowedOrigins.size === 0) {
+        // Sem allowlist configurada: manter permissivo fora de prod para facilitar setup
+        if (process.env.NODE_ENV !== "production") return callback(null, true);
+        logger.error(
+          "[CORS] FRONTEND_URL/FRONTEND_URLS não configurado em produção"
+        );
+        return callback(
+          new Error("CORS: FRONTEND_URL/FRONTEND_URLS nao configurado")
+        );
+      }
+
+      if (!allowedOrigins.has(origin)) {
+        logger.warn(
+          `[CORS] Origin bloqueado: ${origin}. Permitidos: ${JSON.stringify([...allowedOrigins])}`
+        );
+        return callback(new Error(`CORS: origin nao permitido: ${origin}`));
+      }
+
+      return callback(null, true);
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   })
 );
 
@@ -102,6 +143,15 @@ app.get("/health", (req, res) => {
 app.get("/api", (req, res) => {
   res.json({
     message: "API Root is accessible",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Debug endpoint (Root)
+app.get("/", (req, res) => {
+  res.json({
+    message: "Backend is running!",
+    env: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
   });
 });
@@ -142,23 +192,20 @@ app.use((req, res) => {
 // Error handler (must be last)
 app.use(errorHandler);
 
-// Debug endpoint
-app.get("/", (req, res) => {
-  res.json({
-    message: "Backend is running!",
-    env: process.env.NODE_ENV,
-    timestamp: new Date().toISOString(),
-  });
-});
-
 // Start server
-const server = app.listen(PORT, () => {
-  logger.info(`Servidor rodando em porta ${PORT}`);
+const server = app.listen(PORT, HOST, () => {
+  logger.info(`Servidor rodando em ${HOST}:${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV}`);
   logger.info(`Frontend URL: ${process.env.FRONTEND_URL}`);
 
   // Iniciar scheduler de alertas automaticos
-  iniciarScheduler();
+  if (hasSupabaseConfig) {
+    iniciarScheduler();
+  } else {
+    logger.warn(
+      "[CRON] Scheduler não iniciado: SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY ausentes"
+    );
+  }
 });
 
 // Handle unhandled promise rejections

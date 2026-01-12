@@ -1,33 +1,49 @@
 # 📝 COMO CONTINUAR O DESENVOLVIMENTO
 
-**Data:** 05/01/2026
-**Status:** Backend funcionando na porta 3333
+**Data:** 11/01/2026
+**Status:** Backend funcionando, Kanban funcional, WhatsApp integrado.
 
 ---
 
 ## ✅ O QUE JÁ ESTÁ FUNCIONANDO
 
+### Funcionalidades Core
+
+- ✅ Visualização Kanban (Drag-and-Drop) corrigida e integrada com Backend.
+- ✅ Pipeline de Vendas com suporte a fases dinâmicas.
+- ✅ WhatsApp CRM com QR Code e Webhooks automáticos.
+- ✅ Integração com Evolution API robusta (Retry logic).
+- ✅ Importação de Leads via Excel validada.
+
 ### Backend
-- ✅ Servidor rodando em `http://localhost:3333`
+
+- ✅ Servidor rodando.
+- ✅ Rotas de Cotações com validação flexível de status.
 - ✅ Health check disponível em `/health`
-- ✅ Todas as rotas configuradas (mas são placeholders)
+- ✅ Todas as rotas configuradas.
 - ✅ Middleware de autenticação implementado
 - ✅ Error handling global funcionando
 - ✅ Logger Winston configurado
 
 ### Frontend
+
 - ✅ Design System completo criado
-- ✅ Página WhatsApp CRM implementada
+- ✅ Página WhatsApp CRM implementada e consolidada.
 - ✅ Página Importação de Excel implementada
-- ✅ Todas as páginas principais funcionais (mas com dados mock)
+- ✅ Componente KanbanBoard corrigido (Dnd Kit).
 
 ---
 
 ## 🚀 PRÓXIMOS PASSOS (POR ORDEM DE PRIORIDADE)
 
-### 1. CONFIGURAR SUPABASE (CRÍTICO) 🔴
+### 1. CORREÇÕES PENDENTES (Kanban) 🟠
+
+- Criar interface para o usuário adicionar colunas personalizadas (Backend já suporta).
+
+### 2. PENDÊNCIAS ANTERIORES
 
 #### Passo 1: Criar Projeto Supabase
+
 ```bash
 # Acesse https://supabase.com
 # Crie um novo projeto
@@ -38,12 +54,15 @@
 ```
 
 #### Passo 2: Criar Schema SQL
+
 1. Vá ao Supabase > SQL Editor
 2. Copie o schema do arquivo `PLANO-DESENVOLVIMENTO.md`
 3. Execute o SQL completo (linhas 98-316)
 
 #### Passo 3: Configurar Environment Variables
+
 Edite `backend/.env`:
+
 ```env
 # Supabase
 SUPABASE_URL=https://seu-projeto.supabase.co
@@ -54,7 +73,9 @@ SUPABASE_SERVICE_ROLE_KEY=seu-service-role-key
 ```
 
 #### Passo 4: Atualizar Frontend .env
+
 Crie `frontend/.env`:
+
 ```env
 VITE_API_URL=http://localhost:3333/api
 VITE_SUPABASE_URL=https://seu-projeto.supabase.co
@@ -66,9 +87,11 @@ VITE_SUPABASE_KEY=seu-anon-key
 ### 2. IMPLEMENTAR BACKEND APIs (CRÍTICO) 🔴
 
 #### Passo 1: Criar Serviço Supabase
+
 Crie `backend/src/services/supabase.ts`:
+
 ```typescript
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -77,36 +100,38 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 ```
 
 #### Passo 2: Implementar API de Clientes
+
 Atualize `backend/src/routes/clientes.ts` com implementação real:
+
 ```typescript
-import { Router } from 'express';
-import { supabase } from '../services/supabase';
-import { authenticate } from '../middleware/auth';
+import { Router } from "express";
+import { supabase } from "../services/supabase";
+import { authenticate } from "../middleware/auth";
 
 const router = Router();
 router.use(authenticate);
 
 // Listar todos os clientes
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('clientes')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .from("clientes")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (error) throw error;
 
     res.json({ data, total: data?.length || 0 });
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao buscar clientes' });
+    res.status(500).json({ error: "Erro ao buscar clientes" });
   }
 });
 
 // Criar novo cliente
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('clientes')
+      .from("clientes")
       .insert([req.body])
       .select()
       .single();
@@ -115,7 +140,7 @@ router.post('/', async (req, res) => {
 
     res.json(data);
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao criar cliente' });
+    res.status(500).json({ error: "Erro ao criar cliente" });
   }
 });
 
@@ -123,13 +148,16 @@ router.post('/', async (req, res) => {
 ```
 
 #### Passo 3: Implementar Demais APIs
+
 Repita o processo para:
+
 - `apolices.ts`
 - `sinistros.ts`
 - `financeiro.ts`
 - `agenda.ts`
 
 #### Passo 4: Testar APIs
+
 ```bash
 # Terminal 1 - Backend rodando
 cd backend && npm run dev
@@ -144,7 +172,9 @@ curl http://localhost:3333/api/apolices
 ### 3. CONECTAR FRONTEND COM BACKEND (CRÍTICO) 🔴
 
 #### Passo 1: Atualizar API Client
+
 Edite `frontend/src/services/api.ts`:
+
 ```typescript
 // Já configurado para usar VITE_API_URL
 // Se VITE_API_URL não estiver definido, usa http://localhost:3001/api
@@ -152,21 +182,25 @@ Edite `frontend/src/services/api.ts`:
 ```
 
 #### Passo 2: Criar Hook de React Query para Clientes
+
 Crie `frontend/src/hooks/useClientes.ts`:
+
 ```typescript
-import { useQuery } from '@tanstack/react-query';
-import { api } from '../services/api';
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../services/api";
 
 export function useClientes() {
   return useQuery({
-    queryKey: ['clientes'],
-    queryFn: () => api.get('/clientes'),
+    queryKey: ["clientes"],
+    queryFn: () => api.get("/clientes"),
   });
 }
 ```
 
 #### Passo 3: Usar Hook na Página Clientes
+
 Atualize `frontend/src/pages/Clientes.tsx`:
+
 ```typescript
 import { useClientes } from '../hooks/useClientes';
 
@@ -183,6 +217,7 @@ export default function Clientes() {
 ```
 
 #### Passo 4: Testar
+
 ```bash
 # Terminal 1 - Backend
 cd backend && npm run dev
@@ -198,7 +233,9 @@ cd frontend && npm run dev
 ### 4. IMPLEMENTAR DETALHES DE CLIENTES (IMPORTANTE) 🟡
 
 #### Passo 1: Criar Página ClienteDetalhes
+
 Crie `frontend/src/pages/ClienteDetalhes.tsx`:
+
 ```typescript
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -258,7 +295,9 @@ export default function ClienteDetalhes() {
 ```
 
 #### Passo 2: Adicionar Rota
+
 Atualize `frontend/src/App.tsx`:
+
 ```typescript
 <Route
   path="/clientes/:id"
@@ -271,9 +310,11 @@ Atualize `frontend/src/App.tsx`:
 ```
 
 #### Passo 3: Criar Botão "Ver Detalhes" na Lista
+
 Atualize `frontend/src/pages/Clientes.tsx`:
+
 ```tsx
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 
 export default function Clientes() {
   const navigate = useNavigate();
@@ -282,7 +323,7 @@ export default function Clientes() {
 
   <button onClick={() => navigate(`/clientes/${cliente.id}`)}>
     Ver detalhes →
-  </button>
+  </button>;
 }
 ```
 
@@ -291,6 +332,7 @@ export default function Clientes() {
 ### 5. IMPLEMENTAR DETALHES DE APÓLICES (IMPORTANTE) 🟡
 
 Seguir o mesmo processo de ClienteDetalhes para:
+
 - `frontend/src/pages/ApoliceDetalhes.tsx`
 - Backend endpoint `/api/apolices/:id`
 - Componentes de coberturas, endossos, timeline
@@ -300,6 +342,7 @@ Seguir o mesmo processo de ClienteDetalhes para:
 ### 6. IMPLEMENTAR DETALHES DE SINISTROS (IMPORTANTE) 🟡
 
 Seguir o mesmo processo para:
+
 - `frontend/src/pages/SinistroDetalhes.tsx`
 - Backend endpoint `/api/sinistros/:id`
 - Componentes de timeline de regulação, documentos, etc.
@@ -309,6 +352,7 @@ Seguir o mesmo processo para:
 ## 📋 CHECKLIST RÁPIDO
 
 ### Esta Semana:
+
 - [ ] Criar projeto Supabase
 - [ ] Executar schema SQL
 - [ ] Configurar environment variables
@@ -317,12 +361,14 @@ Seguir o mesmo processo para:
 - [ ] Implementar API de sinistros completa
 
 ### Próxima Semana:
+
 - [ ] Conectar frontend com backend
 - [ ] Implementar ClienteDetalhes
 - [ ] Implementar ApoliceDetalhes
 - [ ] Implementar SinistroDetalhes
 
 ### Depois:
+
 - [ ] Integração OpenAI para OCR
 - [ ] Integração Evolution API para WhatsApp
 - [ ] Integração Google Calendar
@@ -334,6 +380,7 @@ Seguir o mesmo processo para:
 ## 💡 DICAS
 
 ### Debugando Backend
+
 ```bash
 # Ver logs
 cd backend && npm run dev
@@ -346,6 +393,7 @@ curl -H "Authorization: Bearer TOKEN" http://localhost:3333/api/clientes
 ```
 
 ### Debugando Frontend
+
 ```bash
 # Iniciar frontend
 cd frontend && npm run dev
@@ -359,6 +407,7 @@ http://localhost:5173
 ```
 
 ### Testes Rápidos
+
 ```bash
 # Backend health check
 curl http://localhost:3333/health
@@ -377,16 +426,19 @@ curl -X POST http://localhost:3333/api/clientes \
 ## 🆘 PROBLEMAS COMUNS
 
 ### Backend não inicia
+
 - Verifique se a porta 3333 está livre
 - Verifique se as variáveis de ambiente estão configuradas
 - Verifique se Supabase está acessível
 
 ### Frontend não conecta no backend
+
 - Verifique VITE_API_URL em `.env`
 - Verifique CORS no backend
 - Verifique se backend está rodando
 
 ### Erro de autenticação
+
 - Verifique JWT_SECRET em `.env`
 - Verifique se token está sendo enviado no header
 - Verifique se token não expirou

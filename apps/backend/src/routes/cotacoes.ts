@@ -163,7 +163,21 @@ router.patch(
     const { id } = req.params;
     const { status_pipeline, motivo_perda, notas } = req.body;
 
-    if (!STATUS_PIPELINE.includes(status_pipeline)) {
+    // Verificar se é um status padrão do sistema
+    let isValidStatus = STATUS_PIPELINE.includes(status_pipeline as any);
+
+    // Se não for padrão, verificar se é um status customizado no banco
+    if (!isValidStatus) {
+      const { data: fase } = await supabase
+        .from("pipeline_fases")
+        .select("chave")
+        .eq("chave", status_pipeline)
+        .maybeSingle(); // maybeSingle para não lançar erro se não achar
+
+      if (fase) isValidStatus = true;
+    }
+
+    if (!isValidStatus) {
       return res.status(400).json({ error: "Status inválido" });
     }
 

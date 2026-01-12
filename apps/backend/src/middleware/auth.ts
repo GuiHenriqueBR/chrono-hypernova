@@ -55,11 +55,11 @@ export const authenticate = async (
 export const authorize = (...roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.userRole) {
-      next(new AppError("Não autenticado", 401));
+      return next(new AppError("Não autenticado", 401));
     }
 
     if (!roles.includes(req.userRole!)) {
-      next(new AppError("Sem permissão para acessar este recurso", 403));
+      return next(new AppError("Sem permissão para acessar este recurso", 403));
     }
 
     next();

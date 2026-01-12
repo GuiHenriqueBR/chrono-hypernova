@@ -141,11 +141,11 @@ export const WhatsAppConnection: React.FC = () => {
                         : `data:image/png;base64,${connectionState.qrcode}`
                     }
                     alt="QR Code WhatsApp"
-                    className="w-[250px] h-[250px] object-contain"
+                    className="w-62.5 h-62.5 object-contain"
                   />
                 </div>
               ) : (
-                <div className="w-[250px] h-[250px] bg-gray-100 flex items-center justify-center rounded-lg text-gray-400">
+                <div className="w-62.5 h-62.5 bg-gray-100 flex items-center justify-center rounded-lg text-gray-400">
                   <div className="text-center">
                     <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin" />
                     <p className="text-sm">Gerando QR Code...</p>

@@ -1,12 +1,20 @@
-const endpoint = "http://localhost:3333/api";
+const endpoint = process.env.API_BASE_URL || "http://localhost:3001/api";
+
+const adminEmail = process.env.ADMIN_EMAIL;
+const adminPassword = process.env.ADMIN_PASSWORD;
+
+if (!adminEmail || !adminPassword) {
+  console.error("Missing ADMIN_EMAIL or ADMIN_PASSWORD env vars.");
+  process.exit(1);
+}
 
 async function testLoginAndAccess() {
   try {
-    console.log("1. Attempting login with admin@chrono.com...");
+    console.log(`1. Attempting login with ${adminEmail}...`);
     const loginRes = await fetch(`${endpoint}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "admin@chrono.com", password: "admin123" }),
+      body: JSON.stringify({ email: adminEmail, password: adminPassword }),
     });
 
     if (!loginRes.ok) {

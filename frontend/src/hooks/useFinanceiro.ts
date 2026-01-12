@@ -26,9 +26,11 @@ interface FinanceiroStats {
 }
 
 interface ComissoesFilters {
-  status?: StatusComissao;
+  status?: StatusComissao | "todos";
   apolice_id?: string;
   mes?: string; // formato YYYY-MM
+  inicio?: string; // YYYY-MM-DD
+  fim?: string; // YYYY-MM-DD
 }
 
 interface CreateComissaoData {
@@ -395,7 +397,7 @@ export function useExportarComissoes() {
 // =====================================================
 
 interface ProjecaoDetalhe {
-  tipo: 'renovacao' | 'pendente';
+  tipo: "renovacao" | "pendente";
   descricao: string;
   valor: number;
   data: string;

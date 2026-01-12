@@ -1,351 +1,364 @@
-import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
-import {
-  Search,
-  Filter,
-  MessageSquare,
-  Phone,
-  MoreVertical,
-  Clock,
-  Loader2,
-  RefreshCw,
-  CheckCircle2,
-  Archive,
-  User,
-  Link2,
-  X,
-  Wifi,
-  WifiOff,
-  QrCode,
-  Settings,
-  LogOut,
-  RotateCcw,
-  Send,
-  Image,
-  Paperclip,
-} from "lucide-react";
-import { PageLayout } from "../components/layout";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Sidebar } from "../components/layout/Sidebar";
+import { useAuthStore } from "../store/authStore";
 import {
   Button,
   Card,
+  Badge,
   Modal,
   ModalFooter,
-  Skeleton,
-  EmptyState,
-  Badge,
-  Avatar,
+  Input,
 } from "../components/common";
+import {
+  MessageSquare,
+  Search,
+  MoreVertical,
+  Paperclip,
+  Send,
+  Phone,
+  User,
+  Check,
+  CheckCheck,
+  Menu,
+  RefreshCw,
+  Link2,
+  FileText,
+  BarChart3,
+  Zap,
+  X,
+  ChevronRight,
+  Copy,
+  Star,
+  Gift,
+  DollarSign,
+  AlertTriangle,
+  Heart,
+  Info,
+  Hand,
+  Settings,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   useWhatsAppConversas,
   useWhatsAppMensagens,
   useEnviarMensagem,
   useWhatsAppTemplates,
-  useWhatsAppStatus,
-  useWhatsAppQRCode,
-  useWhatsAppInfo,
-  useWhatsAppDesconectar,
-  useWhatsAppReiniciar,
-  useAtualizarStatusConversa,
   useVincularCliente,
-  WhatsAppConversa,
-  WhatsAppMensagem,
+  useAtualizarStatusConversa,
+  useWhatsAppMetricas,
+  useWhatsAppStatus,
+  useTemplateCategorias,
+  useTemplateVariaveis,
+  useRegistrarUsoTemplate,
+  useProcessarTemplate,
+  useAtribuirConversa,
+  type WhatsAppConversa,
+  type WhatsAppTemplate,
 } from "../hooks/useWhatsApp";
 import { useClientes } from "../hooks/useClientes";
+import { adminService } from "../services/adminService";
+import { useQuery } from "@tanstack/react-query";
 
-// Helper para formatar tempo relativo
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+const statusColors: Record<string, string> = {
+  aberta: "bg-blue-100 text-blue-600",
+  em_atendimento: "bg-amber-100 text-amber-600",
+  resolvida: "bg-emerald-100 text-emerald-600",
+  arquivada: "bg-slate-100 text-slate-600",
+};
 
-  if (diffMins < 1) return "Agora";
-  if (diffMins < 60) return `${diffMins} min`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays === 1) return "Ontem";
-  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-}
+// Icones das categorias de templates
+const categoriaIcons: Record<string, React.ElementType> = {
+  saudacao: Hand,
+  cotacao: FileText,
+  sinistro: AlertTriangle,
+  cobranca: DollarSign,
+  renovacao: RefreshCw,
+  aniversario: Gift,
+  agradecimento: Heart,
+  informativo: Info,
+  outros: MessageSquare,
+};
 
-// Helper para formatar hora
-function formatTime(dateString: string): string {
-  return new Date(dateString).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-// Helper para formatar telefone
-function formatPhone(phone: string): string {
-  const cleaned = phone.replace(/\D/g, "");
-  if (cleaned.length === 11) {
-    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
-  }
-  if (cleaned.length === 10) {
-    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
-  }
-  return phone;
-}
-
-export default function WhatsApp() {
+export default function WhatsAppCRM() {
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const [selectedChat, setSelectedChat] = useState<WhatsAppConversa | null>(
+    null
+  );
+  const [inputText, setInputText] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("todas");
-  const [selectedConversa, setSelectedConversa] =
-    useState<WhatsAppConversa | null>(null);
-  const [newMessage, setNewMessage] = useState("");
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isVincularModalOpen, setIsVincularModalOpen] = useState(false);
+  const [filtroStatus, setFiltroStatus] = useState("todas");
+  const [showVincularModal, setShowVincularModal] = useState(false);
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+  const [showMetricas, setShowMetricas] = useState(false);
+  const [clienteSearch, setClienteSearch] = useState("");
+  const [showFloatingTemplates, setShowFloatingTemplates] = useState(false);
+  const [selectedCategoria, setSelectedCategoria] = useState<string>("todos");
+  const [templateSearch, setTemplateSearch] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // API hooks
+  // Queries
   const {
     data: conversasData,
-    isLoading: loadingConversas,
-    error: errorConversas,
+    isLoading: isLoadingConversas,
     refetch: refetchConversas,
   } = useWhatsAppConversas({
-    status: filterStatus,
+    status: filtroStatus,
     search: searchTerm,
   });
-  const { data: mensagensData, isLoading: loadingMensagens } =
-    useWhatsAppMensagens(selectedConversa?.id || null);
-  const { data: templatesData } = useWhatsAppTemplates();
-  const { data: statusData, refetch: refetchStatus } = useWhatsAppStatus();
-  const {
-    data: qrData,
-    refetch: refetchQR,
-    isLoading: loadingQR,
-  } = useWhatsAppQRCode(isQRModalOpen);
-  const { data: infoData } = useWhatsAppInfo();
-  const { data: clientesData } = useClientes();
+  const { data: templatesData } = useWhatsAppTemplates(selectedCategoria);
+  const { data: categoriasData } = useTemplateCategorias();
+  const { data: variaveisData } = useTemplateVariaveis();
+  const { data: metricas } = useWhatsAppMetricas();
+  const { data: statusConexao } = useWhatsAppStatus();
+  const { data: clientesData } = useClientes({
+    search: clienteSearch,
+    limit: 10,
+  });
 
+  // Mutations
   const enviarMensagem = useEnviarMensagem();
-  const atualizarStatus = useAtualizarStatusConversa();
   const vincularCliente = useVincularCliente();
-  const desconectar = useWhatsAppDesconectar();
-  const reiniciar = useWhatsAppReiniciar();
+  const atualizarStatus = useAtualizarStatusConversa();
+  const registrarUsoTemplate = useRegistrarUsoTemplate();
+  const processarTemplate = useProcessarTemplate();
+  const atribuirConversa = useAtribuirConversa();
 
-  // Dados
-  const conversas = conversasData?.data || [];
-  const mensagens = mensagensData?.data || [];
-  const templates = templatesData?.data || [];
+  // Só buscar usuários se for admin (para funcionalidade de atribuição)
+  const isAdmin = user?.role === "admin";
+  const { data: usersData } = useQuery({
+    queryKey: ["users"],
+    queryFn: adminService.getUsers,
+    enabled: isAdmin, // Só executa se for admin
+    retry: false, // Não tentar novamente em caso de erro 403
+  });
+
+  const users = usersData || [];
+
+  const conversasList = useMemo(
+    () => conversasData?.data || [],
+    [conversasData?.data]
+  );
+  const templates = useMemo(
+    () => templatesData?.data || [],
+    [templatesData?.data]
+  );
+  const categorias = useMemo(
+    () => categoriasData?.data || [],
+    [categoriasData?.data]
+  );
+  const variaveis = useMemo(
+    () => variaveisData?.data || [],
+    [variaveisData?.data]
+  );
   const clientes = clientesData?.data || [];
-  const isConnected = statusData?.conectado ?? false;
-  const connectionState = statusData?.estado || "desconhecido";
 
-  // Filtrar conversas localmente
-  const filteredConversas = conversas.filter(
-    (c) =>
-      c.nome_contato.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.telefone.includes(searchTerm) ||
-      c.ultima_mensagem?.toLowerCase().includes(searchTerm.toLowerCase())
+  // Filtrar templates por busca
+  const templatesFiltrados = useMemo(() => {
+    if (!templateSearch) return templates;
+    const searchLower = templateSearch.toLowerCase();
+    return templates.filter(
+      (t) =>
+        t.nome.toLowerCase().includes(searchLower) ||
+        t.conteudo.toLowerCase().includes(searchLower)
+    );
+  }, [templates, templateSearch]);
+
+  // Auto-selecionar primeira conversa - usamos initialSelectedChat para evitar setState em useEffect
+  const initialSelectedChat = useMemo(() => {
+    if (conversasList.length > 0) {
+      return conversasList[0];
+    }
+    return null;
+  }, [conversasList]);
+
+  // Atualiza selectedChat apenas quando initialSelectedChat mudar e nao ha chat selecionado
+  const effectiveSelectedChat = selectedChat || initialSelectedChat;
+
+  // Query de mensagens usa effectiveSelectedChat
+  const { data: mensagensData, isLoading: isLoadingMensagens } =
+    useWhatsAppMensagens(effectiveSelectedChat?.id || null);
+  const mensagensList = useMemo(
+    () => mensagensData?.data || [],
+    [mensagensData?.data]
   );
 
-  // Selecionar primeira conversa por padrão
-  useEffect(() => {
-    if (filteredConversas.length > 0 && !selectedConversa) {
-      // Small timeout to avoid immediate state update during render cycle if not absolutely necessary,
-      // or simply accept it happens once.
-      // Better: Only set if truly null.
-      const timer = setTimeout(
-        () => setSelectedConversa(filteredConversas[0]),
-        0
-      );
-      return () => clearTimeout(timer);
-    }
-  }, [filteredConversas, selectedConversa]);
-
-  // Scroll para última mensagem
+  // Scroll para ultima mensagem
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [mensagensData]); // Usar mensagensData em vez de mensagens array para evitar loop
+  }, [mensagensList]);
 
-  // Abrir modal QR se desconectado
-  useEffect(() => {
-    if (statusData && !statusData.conectado && connectionState !== "open") {
-      // Auto abrir modal de conexão se não estiver conectado
-    }
-  }, [statusData, connectionState]);
-
-  // Enviar mensagem
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversa) return;
+  const handleEnviarMensagem = async () => {
+    if (!inputText.trim() || !effectiveSelectedChat) return;
 
     try {
       await enviarMensagem.mutateAsync({
-        conversaId: selectedConversa.id,
-        mensagem: newMessage.trim(),
+        conversaId: effectiveSelectedChat.id,
+        mensagem: inputText,
       });
-      setNewMessage("");
+      setInputText("");
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
     }
   };
 
-  // Ligar para contato
-  const handleCall = () => {
-    if (selectedConversa) {
-      window.open(`tel:+55${selectedConversa.telefone}`, "_self");
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleEnviarMensagem();
     }
   };
 
-  // Atualizar status da conversa
-  const handleUpdateStatus = async (status: string) => {
-    if (!selectedConversa) return;
-    try {
-      await atualizarStatus.mutateAsync({
-        conversaId: selectedConversa.id,
-        status,
-      });
-      setSelectedConversa({
-        ...selectedConversa,
-        status: status as WhatsAppConversa["status"],
-      });
-    } catch (error) {
-      console.error("Erro ao atualizar status:", error);
-    }
-  };
-
-  // Vincular cliente
   const handleVincularCliente = async (clienteId: string) => {
-    if (!selectedConversa) return;
+    if (!effectiveSelectedChat) return;
     try {
       await vincularCliente.mutateAsync({
-        conversaId: selectedConversa.id,
+        conversaId: effectiveSelectedChat.id,
         clienteId,
       });
-      setIsVincularModalOpen(false);
+      setShowVincularModal(false);
       refetchConversas();
     } catch (error) {
       console.error("Erro ao vincular cliente:", error);
     }
   };
 
-  // Desconectar WhatsApp
-  const handleDesconectar = async () => {
+  const handleAtualizarStatus = async (status: string) => {
+    if (!effectiveSelectedChat) return;
     try {
-      await desconectar.mutateAsync();
-      refetchStatus();
-      setIsSettingsOpen(false);
+      await atualizarStatus.mutateAsync({
+        conversaId: effectiveSelectedChat.id,
+        status,
+      });
+      refetchConversas();
     } catch (error) {
-      console.error("Erro ao desconectar:", error);
+      console.error("Erro ao atualizar status:", error);
     }
   };
 
-  // Reiniciar instância
-  const handleReiniciar = async () => {
+  const handleAtribuirUsuario = async (usuarioId: string) => {
+    if (!effectiveSelectedChat) return;
     try {
-      await reiniciar.mutateAsync();
-      refetchStatus();
-      refetchQR();
+      await atribuirConversa.mutateAsync({
+        conversaId: effectiveSelectedChat.id,
+        usuarioId: usuarioId || null,
+      });
+      refetchConversas();
     } catch (error) {
-      console.error("Erro ao reiniciar:", error);
+      console.error("Erro ao atribuir usuário:", error);
     }
   };
 
-  // Status badge variant
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "aberta":
-        return (
-          <Badge variant="warning" size="sm">
-            Nova
-          </Badge>
-        );
-      case "em_atendimento":
-        return (
-          <Badge variant="info" size="sm">
-            Em atendimento
-          </Badge>
-        );
-      case "resolvida":
-        return (
-          <Badge variant="success" size="sm">
-            Resolvida
-          </Badge>
-        );
-      case "arquivada":
-        return (
-          <Badge variant="neutral" size="sm">
-            Arquivada
-          </Badge>
-        );
-      default:
-        return null;
+  const handleUsarTemplate = async (template: WhatsAppTemplate) => {
+    // Processar variaveis do template
+    const clienteId = effectiveSelectedChat?.clientes?.id;
+
+    try {
+      const response = await processarTemplate.mutateAsync({
+        template: template.conteudo,
+        clienteId,
+        contexto: {},
+      });
+
+      setInputText(response.mensagem);
+      registrarUsoTemplate.mutate(template.id);
+    } catch {
+      // Se falhar, usar template sem processar
+      setInputText(template.conteudo);
     }
+
+    setShowTemplatesModal(false);
+    setShowFloatingTemplates(false);
+    inputRef.current?.focus();
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + T = Abrir templates
+      if ((e.ctrlKey || e.metaKey) && e.key === "t") {
+        e.preventDefault();
+        setShowFloatingTemplates((prev) => !prev);
+      }
+      // Escape = Fechar painel flutuante
+      if (e.key === "Escape" && showFloatingTemplates) {
+        setShowFloatingTemplates(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showFloatingTemplates]);
+
+  const formatarData = (data: string) => {
+    const d = new Date(data);
+    const hoje = new Date();
+    const diff = hoje.getTime() - d.getTime();
+    const dias = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (dias === 0)
+      return d.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    if (dias === 1) return "Ontem";
+    if (dias < 7) return d.toLocaleDateString("pt-BR", { weekday: "short" });
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
   };
 
   return (
-    <PageLayout
-      title="WhatsApp CRM"
-      subtitle="Integração com clientes via WhatsApp"
-    >
-      {/* Status da conexão */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${isConnected ? "bg-emerald-100" : "bg-red-100"}`}
-          >
-            {isConnected ? (
-              <Wifi className="w-4 h-4 text-emerald-600" />
-            ) : (
-              <WifiOff className="w-4 h-4 text-red-600" />
-            )}
-            <span
-              className={`text-sm font-medium ${isConnected ? "text-emerald-700" : "text-red-700"}`}
-            >
-              {isConnected ? "Conectado" : "Desconectado"}
-            </span>
-          </div>
+    <div className="flex h-screen overflow-hidden bg-slate-50 relative">
+      <Sidebar />
 
-          {isConnected && infoData?.numero && (
-            <span className="text-sm text-slate-500">
-              {formatPhone(infoData.numero)}
-            </span>
-          )}
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              refetchConversas();
-              refetchStatus();
-            }}
-          >
-            <RefreshCw className="w-4 h-4" />
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {!isConnected && (
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<QrCode className="w-4 h-4" />}
-              onClick={() => setIsQRModalOpen(true)}
-            >
-              Conectar WhatsApp
-            </Button>
-          )}
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsSettingsOpen(true)}
-          >
-            <Settings className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="h-[calc(100vh-250px)] flex gap-6">
-        {/* Lista de Conversas */}
-        <div className="w-80 flex flex-col bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200 overflow-hidden">
-          {/* Header */}
+      <div className="flex-1 flex lg:ml-70 h-full relative">
+        {/* Painel Esquerdo: Lista de Conversas */}
+        <div className="w-80 border-r border-slate-200 bg-white/80 backdrop-blur-xl flex-col h-full z-10 hidden md:flex">
           <div className="p-4 border-b border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-violet-600" />
+                WhatsApp
+              </h2>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      statusConexao?.conectado ? "bg-emerald-500" : "bg-red-500"
+                    } ring-2 ring-white`}
+                  />
+                  <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">
+                    {statusConexao?.conectado ? "Online" : "Offline"}
+                  </span>
+                </div>
+                <Link
+                  to="/whatsapp"
+                  className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-violet-50 hover:text-violet-600 transition-colors"
+                  title="Configurar Conexão"
+                >
+                  <Settings className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Metricas Resumidas */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <div className="p-2 bg-violet-50 rounded-lg text-center">
+                <p className="text-lg font-bold text-violet-600">
+                  {metricas?.conversasAbertas || 0}
+                </p>
+                <p className="text-[10px] text-slate-500">Abertas</p>
+              </div>
+              <div className="p-2 bg-emerald-50 rounded-lg text-center">
+                <p className="text-lg font-bold text-emerald-600">
+                  {metricas?.mensagensHoje || 0}
+                </p>
+                <p className="text-[10px] text-slate-500">Msgs Hoje</p>
+              </div>
+            </div>
+
+            {/* Busca */}
             <div className="relative mb-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
@@ -353,688 +366,781 @@ export default function WhatsApp() {
                 placeholder="Buscar conversas..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-slate-100 border border-transparent rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-violet-300 transition-all"
+                className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 outline-none transition-all"
               />
             </div>
 
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                leftIcon={<Filter className="w-4 h-4" />}
-                onClick={() => setIsFilterModalOpen(true)}
-              >
-                Filtros
-              </Button>
-              {filterStatus !== "todas" && (
-                <Badge
-                  variant="info"
-                  size="sm"
-                  className="flex items-center gap-1"
-                >
-                  {filterStatus}
-                  <button onClick={() => setFilterStatus("todas")}>
-                    <X className="w-3 h-3" />
+            {/* Filtros de Status */}
+            <div className="flex gap-1 overflow-x-auto pb-1">
+              {["todas", "aberta", "em_atendimento", "resolvida"].map(
+                (status) => (
+                  <button
+                    key={status}
+                    onClick={() => setFiltroStatus(status)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                      filtroStatus === status
+                        ? "bg-violet-100 text-violet-700"
+                        : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                    }`}
+                  >
+                    {status === "todas"
+                      ? "Todas"
+                      : status === "em_atendimento"
+                        ? "Atendendo"
+                        : status.charAt(0).toUpperCase() + status.slice(1)}
                   </button>
-                </Badge>
+                )
               )}
             </div>
           </div>
 
-          {/* Loading */}
-          {loadingConversas && (
-            <div className="p-4 space-y-3">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} height={80} />
-              ))}
-            </div>
-          )}
-
-          {/* Error */}
-          {errorConversas && (
-            <div className="p-4 text-center text-red-500 text-sm">
-              Erro ao carregar conversas
-            </div>
-          )}
-
-          {/* Empty State - Não conectado */}
-          {!loadingConversas &&
-            !errorConversas &&
-            !isConnected &&
-            conversas.length === 0 && (
-              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                <WifiOff className="w-12 h-12 text-slate-300 mb-4" />
-                <h3 className="text-sm font-medium text-slate-700 mb-2">
-                  WhatsApp não conectado
-                </h3>
-                <p className="text-xs text-slate-500 mb-4">
-                  Conecte seu WhatsApp para visualizar as conversas
+          {/* Lista de Conversas */}
+          <div className="flex-1 overflow-y-auto">
+            {isLoadingConversas ? (
+              <div className="p-4 text-center">
+                <RefreshCw className="w-6 h-6 text-slate-400 animate-spin mx-auto" />
+              </div>
+            ) : conversasList.length === 0 ? (
+              <div className="p-8 text-center">
+                <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm text-slate-500">
+                  Nenhuma conversa encontrada
                 </p>
-                <Button size="sm" onClick={() => setIsQRModalOpen(true)}>
-                  <QrCode className="w-4 h-4 mr-2" />
-                  Conectar
-                </Button>
               </div>
-            )}
-
-          {/* Conversas */}
-          {!loadingConversas &&
-            !errorConversas &&
-            (isConnected || conversas.length > 0) && (
-              <div className="flex-1 overflow-y-auto">
-                {filteredConversas.length === 0 ? (
-                  <div className="p-4 text-center text-slate-500 text-sm">
-                    Nenhuma conversa encontrada
+            ) : (
+              conversasList.map((chat) => (
+                <div
+                  key={chat.id}
+                  onClick={() => setSelectedChat(chat)}
+                  className={`p-4 flex gap-3 cursor-pointer transition-colors border-b border-slate-50 ${
+                    effectiveSelectedChat?.id === chat.id
+                      ? "bg-violet-50/50"
+                      : "hover:bg-slate-50"
+                  }`}
+                >
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${
+                      chat.clientes
+                        ? "bg-violet-100 text-violet-600"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {chat.nome_contato.charAt(0).toUpperCase()}
                   </div>
-                ) : (
-                  filteredConversas.map((conversa) => (
-                    <motion.button
-                      key={conversa.id}
-                      onClick={() => setSelectedConversa(conversa)}
-                      whileHover={{ x: 2 }}
-                      className={`
-                      w-full p-4 border-b border-slate-100 text-left
-                      transition-all
-                      ${
-                        selectedConversa?.id === conversa.id
-                          ? "bg-violet-50 border-l-4 border-l-violet-500"
-                          : "hover:bg-slate-50"
-                      }
-                    `}
-                    >
-                      <div className="flex items-start gap-3">
-                        <Avatar name={conversa.nome_contato} size="md" />
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <h4 className="text-sm font-semibold text-slate-800 truncate">
-                              {conversa.nome_contato}
-                            </h4>
-                            <span className="text-xs text-slate-500">
-                              {conversa.ultima_mensagem_data
-                                ? formatRelativeTime(
-                                    conversa.ultima_mensagem_data
-                                  )
-                                : ""}
-                            </span>
-                          </div>
-
-                          <p className="text-xs text-slate-600 line-clamp-2 mb-2">
-                            {conversa.ultima_mensagem || "Sem mensagens"}
-                          </p>
-
-                          <div className="flex items-center justify-between">
-                            {getStatusBadge(conversa.status)}
-                            {conversa.nao_lidas > 0 && (
-                              <span className="px-2 py-0.5 bg-violet-500 text-white text-[10px] font-bold rounded-full">
-                                {conversa.nao_lidas}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </motion.button>
-                  ))
-                )}
-              </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline mb-1">
+                      <h3 className="font-semibold text-slate-800 truncate text-sm">
+                        {chat.nome_contato}
+                      </h3>
+                      <span className="text-[10px] text-slate-400">
+                        {formatarData(chat.ultima_mensagem_data)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 truncate">
+                      {chat.ultima_mensagem}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] ${statusColors[chat.status]}`}
+                      >
+                        {chat.status}
+                      </span>
+                      {chat.clientes && (
+                        <span className="flex items-center gap-1 text-[10px] text-emerald-600">
+                          <Link2 className="w-3 h-3" />
+                          Vinculado
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {chat.nao_lidas > 0 && (
+                    <div className="flex flex-col justify-center items-end">
+                      <span className="w-5 h-5 bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center rounded-full">
+                        {chat.nao_lidas}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))
             )}
+          </div>
+
+          {/* Botao de Metricas */}
+          <div className="p-3 border-t border-slate-200">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              leftIcon={<BarChart3 className="w-4 h-4" />}
+              onClick={() => setShowMetricas(true)}
+            >
+              Ver Metricas Completas
+            </Button>
+          </div>
         </div>
 
-        {/* Chat */}
-        {selectedConversa ? (
-          <div className="flex-1 flex flex-col bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200 overflow-hidden">
-            {/* Header */}
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar name={selectedConversa.nome_contato} size="md" />
-                <div>
-                  <h3 className="font-semibold text-slate-800">
-                    {selectedConversa.nome_contato}
-                  </h3>
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
-                    <span>{formatPhone(selectedConversa.telefone)}</span>
-                    {getStatusBadge(selectedConversa.status)}
+        {/* Painel Direito: Chat */}
+        <div className="flex-1 flex flex-col h-full bg-slate-100/50 relative">
+          {effectiveSelectedChat ? (
+            <>
+              {/* Header do Chat */}
+              <header className="h-16 bg-white/90 backdrop-blur border-b border-slate-200 flex items-center justify-between px-4 z-10 shrink-0">
+                <div className="flex items-center gap-3">
+                  <button className="md:hidden p-2 -ml-2 text-slate-500">
+                    <Menu className="w-5 h-5" />
+                  </button>
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                      effectiveSelectedChat.clientes
+                        ? "bg-violet-100 text-violet-600"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {effectiveSelectedChat.nome_contato.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-sm">
+                      {effectiveSelectedChat.nome_contato}
+                    </h3>
+                    <p className="text-[10px] text-slate-500">
+                      {effectiveSelectedChat.telefone}
+                    </p>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  leftIcon={<Phone className="w-4 h-4" />}
-                  onClick={handleCall}
-                >
-                  Ligar
-                </Button>
-                <div className="relative group">
-                  <Button variant="ghost" size="sm">
+                <div className="flex items-center gap-1">
+                  {!effectiveSelectedChat.clientes && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-slate-500 h-8 px-2"
+                      onClick={() => setShowVincularModal(true)}
+                    >
+                      <Link2 className="w-4 h-4 mr-1" />
+                      <span className="text-xs">Vincular</span>
+                    </Button>
+                  )}
+
+                  <select
+                    value={effectiveSelectedChat.status}
+                    onChange={(e) => handleAtualizarStatus(e.target.value)}
+                    className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white"
+                  >
+                    <option value="aberta">Aberta</option>
+                    <option value="em_atendimento">Em Atendimento</option>
+                    <option value="resolvida">Resolvida</option>
+                    <option value="arquivada">Arquivada</option>
+                  </select>
+
+                  <select
+                    value={effectiveSelectedChat.atribuido_usuario_id || ""}
+                    onChange={(e) => handleAtribuirUsuario(e.target.value)}
+                    className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white max-w-30"
+                    title="Atribuir Responsável"
+                  >
+                    <option value="">Sem responsável</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.nome || user.email}
+                      </option>
+                    ))}
+                  </select>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-slate-500 h-8 w-8 p-0"
+                  >
+                    <Phone className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-slate-500 h-8 w-8 p-0"
+                    onClick={() => setShowTemplatesModal(true)}
+                    title="Gerenciar Templates"
+                  >
+                    <FileText className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-slate-500 h-8 w-8 p-0"
+                  >
                     <MoreVertical className="w-4 h-4" />
                   </Button>
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                    <button
-                      onClick={() => handleUpdateStatus("em_atendimento")}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                    >
-                      <User className="w-4 h-4" />
-                      Marcar em atendimento
-                    </button>
-                    <button
-                      onClick={() => handleUpdateStatus("resolvida")}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      Marcar como resolvida
-                    </button>
-                    <button
-                      onClick={() => handleUpdateStatus("arquivada")}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                    >
-                      <Archive className="w-4 h-4" />
-                      Arquivar conversa
-                    </button>
-                    {!selectedConversa.cliente_id && (
-                      <button
-                        onClick={() => setIsVincularModalOpen(true)}
-                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                      >
-                        <Link2 className="w-4 h-4" />
-                        Vincular cliente
-                      </button>
-                    )}
-                  </div>
                 </div>
-              </div>
-            </div>
+              </header>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
-              {loadingMensagens ? (
-                <div className="flex items-center justify-center h-full">
-                  <Loader2 className="w-6 h-6 animate-spin text-violet-500" />
+              {/* Info do Cliente Vinculado */}
+              {effectiveSelectedChat.clientes && (
+                <div className="px-4 py-2 bg-violet-50 border-b border-violet-100 flex items-center gap-3">
+                  <User className="w-4 h-4 text-violet-600" />
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-violet-800">
+                      {effectiveSelectedChat.clientes.nome}
+                    </p>
+                    <p className="text-[10px] text-violet-600">
+                      {effectiveSelectedChat.clientes.email}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-violet-600 h-6 px-2 text-xs"
+                  >
+                    Ver Perfil
+                  </Button>
                 </div>
-              ) : mensagens.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-slate-500 text-sm">
-                  Nenhuma mensagem ainda
-                </div>
-              ) : (
-                <>
-                  {mensagens.map((message: WhatsAppMensagem) => (
+              )}
+
+              {/* Mensagens */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {isLoadingMensagens ? (
+                  <div className="text-center py-8">
+                    <RefreshCw className="w-6 h-6 text-slate-400 animate-spin mx-auto" />
+                  </div>
+                ) : mensagensList.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm text-slate-500">
+                      Nenhuma mensagem ainda
+                    </p>
+                  </div>
+                ) : (
+                  mensagensList.map((msg) => (
                     <motion.div
-                      key={message.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className={`flex ${message.direcao === "recebida" ? "justify-start" : "justify-end"}`}
+                      key={msg.id}
+                      className={`flex ${msg.direcao === "enviada" ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`
-                          max-w-[70%] px-4 py-3 rounded-2xl shadow-sm
-                          ${
-                            message.direcao === "recebida"
-                              ? "bg-white text-slate-800 rounded-bl-none"
-                              : "bg-violet-600 text-white rounded-br-none"
-                          }
-                        `}
+                        className={`max-w-[75%] p-3 rounded-2xl shadow-sm relative text-sm ${
+                          msg.direcao === "enviada"
+                            ? "bg-violet-600 text-white rounded-tr-none"
+                            : "bg-white text-slate-800 border border-slate-100 rounded-tl-none"
+                        }`}
                       >
-                        {message.tipo === "imagem" && (
-                          <div className="mb-2">
-                            <Image className="w-4 h-4" />
-                          </div>
-                        )}
-                        {message.tipo === "documento" && (
-                          <div className="mb-2">
-                            <Paperclip className="w-4 h-4" />
-                          </div>
-                        )}
-                        <p className="text-sm whitespace-pre-wrap">
-                          {message.conteudo}
+                        <p className="leading-relaxed whitespace-pre-wrap">
+                          {msg.conteudo}
                         </p>
                         <div
-                          className={`flex items-center gap-1 mt-1 ${
-                            message.direcao === "recebida"
-                              ? "justify-start"
-                              : "justify-end"
+                          className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
+                            msg.direcao === "enviada"
+                              ? "text-violet-200"
+                              : "text-slate-400"
                           }`}
                         >
-                          <Clock className="w-3 h-3 opacity-60" />
-                          <span className="text-[10px] opacity-60">
-                            {formatTime(message.timestamp)}
+                          <span>
+                            {new Date(msg.timestamp).toLocaleTimeString(
+                              "pt-BR",
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
                           </span>
-                          {message.direcao === "enviada" &&
-                            (message.status === "lida" ? (
-                              <CheckCircle2 className="w-3 h-3 opacity-60" />
-                            ) : message.status === "pendente" ? (
-                              <Clock className="w-3 h-3 opacity-60" />
-                            ) : null)}
+                          {msg.direcao === "enviada" &&
+                            (msg.status === "lida" ? (
+                              <CheckCheck className="w-3 h-3 text-blue-300" />
+                            ) : msg.status === "entregue" ? (
+                              <CheckCheck className="w-3 h-3" />
+                            ) : (
+                              <Check className="w-3 h-3" />
+                            ))}
                         </div>
                       </div>
                     </motion.div>
-                  ))}
-                  <div ref={messagesEndRef} />
-                </>
-              )}
-            </div>
-
-            {/* Input */}
-            <div className="p-4 border-t border-slate-200 bg-white">
-              <div className="flex gap-2">
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    placeholder={
-                      isConnected
-                        ? "Digite sua mensagem..."
-                        : "Conecte o WhatsApp para enviar mensagens"
-                    }
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) =>
-                      e.key === "Enter" && !e.shiftKey && handleSendMessage()
-                    }
-                    className="w-full px-4 py-2.5 bg-slate-100 border border-transparent rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-violet-300 transition-all"
-                    disabled={enviarMensagem.isPending || !isConnected}
-                  />
-                </div>
-
-                <Button
-                  onClick={handleSendMessage}
-                  leftIcon={
-                    enviarMensagem.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )
-                  }
-                  disabled={
-                    !newMessage.trim() ||
-                    enviarMensagem.isPending ||
-                    !isConnected
-                  }
-                >
-                  Enviar
-                </Button>
-              </div>
-
-              {/* Quick Replies */}
-              {templates.length > 0 && (
-                <div className="mt-3">
-                  <p className="text-xs text-slate-500 mb-2 font-medium">
-                    Respostas Rápidas:
-                  </p>
-                  <div className="flex gap-2 flex-wrap">
-                    {templates.slice(0, 3).map((template) => (
-                      <button
-                        key={template.id}
-                        onClick={() => setNewMessage(template.conteudo)}
-                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs text-slate-700 transition-colors"
-                        disabled={!isConnected}
-                      >
-                        {template.nome}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-center bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200">
-            <EmptyState
-              icon={<MessageSquare className="w-8 h-8" />}
-              title={
-                isConnected
-                  ? "Selecione uma conversa"
-                  : "WhatsApp não conectado"
-              }
-              description={
-                isConnected
-                  ? "Escolha uma conversa na lista para visualizar as mensagens"
-                  : "Conecte seu WhatsApp para começar"
-              }
-              action={
-                !isConnected
-                  ? {
-                      label: "Conectar WhatsApp",
-                      onClick: () => setIsQRModalOpen(true),
-                    }
-                  : undefined
-              }
-            />
-          </div>
-        )}
-
-        {/* Painel Lateral - Templates e Info */}
-        {selectedConversa && (
-          <div className="w-72 flex flex-col gap-4">
-            {/* Cliente Info */}
-            <Card padding="sm">
-              <h4 className="text-sm font-semibold text-slate-800 mb-3">
-                Informações do Contato
-              </h4>
-              <div className="space-y-2">
-                <div>
-                  <p className="text-xs text-slate-500">Nome</p>
-                  <p className="text-sm text-slate-800">
-                    {selectedConversa.nome_contato}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Telefone</p>
-                  <p className="text-sm text-slate-800">
-                    {formatPhone(selectedConversa.telefone)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Status</p>
-                  {getStatusBadge(selectedConversa.status)}
-                </div>
-                {selectedConversa.cliente_id ? (
-                  <div>
-                    <p className="text-xs text-slate-500">Cliente Vinculado</p>
-                    <Badge variant="success" size="sm">
-                      Vinculado
-                    </Badge>
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full mt-2"
-                    onClick={() => setIsVincularModalOpen(true)}
-                  >
-                    <Link2 className="w-4 h-4 mr-2" />
-                    Vincular a cliente
-                  </Button>
+                  ))
                 )}
+                <div ref={messagesEndRef} />
               </div>
-            </Card>
 
-            {/* Templates */}
-            {templates.length > 0 && (
-              <Card>
-                <h4 className="text-sm font-semibold text-slate-800 mb-3">
-                  Templates de Resposta
-                </h4>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {templates.map((template) => (
-                    <button
-                      key={template.id}
-                      onClick={() => setNewMessage(template.conteudo)}
-                      className="w-full p-3 text-left bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
-                      disabled={!isConnected}
+              {/* Input de Mensagem */}
+              <div className="p-3 bg-white/90 backdrop-blur border-t border-slate-200 z-10 shrink-0 relative">
+                {/* Floating Templates Panel */}
+                <AnimatePresence>
+                  {showFloatingTemplates && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute bottom-full left-0 right-0 mb-2 mx-3 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden max-h-100 flex"
                     >
-                      <p className="text-sm font-medium text-slate-800 mb-1">
-                        {template.nome}
-                      </p>
-                      <p className="text-xs text-slate-500 line-clamp-2">
-                        {template.conteudo}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </Card>
-            )}
-          </div>
-        )}
-      </div>
+                      {/* Categorias Sidebar */}
+                      <div className="w-48 bg-slate-50 border-r border-slate-200 flex flex-col">
+                        <div className="p-3 border-b border-slate-200">
+                          <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                            <Zap className="w-4 h-4 text-violet-600" />
+                            Templates Rapidos
+                          </h3>
+                          <p className="text-[10px] text-slate-500 mt-1">
+                            Ctrl+T para abrir/fechar
+                          </p>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                          <button
+                            onClick={() => setSelectedCategoria("todos")}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+                              selectedCategoria === "todos"
+                                ? "bg-violet-100 text-violet-700"
+                                : "text-slate-600 hover:bg-slate-100"
+                            }`}
+                          >
+                            <Star className="w-4 h-4" />
+                            Todos
+                          </button>
+                          {categorias.map((cat) => {
+                            const Icon =
+                              categoriaIcons[cat.value] || MessageSquare;
+                            return (
+                              <button
+                                key={cat.value}
+                                onClick={() => setSelectedCategoria(cat.value)}
+                                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+                                  selectedCategoria === cat.value
+                                    ? "bg-violet-100 text-violet-700"
+                                    : "text-slate-600 hover:bg-slate-100"
+                                }`}
+                              >
+                                <Icon
+                                  className="w-4 h-4"
+                                  style={{ color: cat.cor }}
+                                />
+                                {cat.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
 
-      {/* Modal QR Code */}
-      <Modal
-        isOpen={isQRModalOpen}
-        onClose={() => setIsQRModalOpen(false)}
-        title="Conectar WhatsApp"
-        size="md"
-      >
-        <div className="text-center py-4">
-          {loadingQR ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="w-12 h-12 animate-spin text-violet-500 mb-4" />
-              <p className="text-slate-600">Gerando QR Code...</p>
-            </div>
-          ) : qrData?.conectado ? (
-            <div className="flex flex-col items-center py-8">
-              <CheckCircle2 className="w-16 h-16 text-emerald-500 mb-4" />
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">
-                WhatsApp Conectado!
-              </h3>
-              <p className="text-sm text-slate-600">
-                Seu WhatsApp está pronto para uso.
-              </p>
-            </div>
-          ) : qrData?.qrcode ? (
-            <div className="flex flex-col items-center">
-              <div className="bg-white p-4 rounded-xl border-2 border-slate-200 mb-4">
-                <img
-                  src={
-                    qrData.qrcode?.startsWith("data:")
-                      ? qrData.qrcode
-                      : `data:image/png;base64,${qrData.qrcode}`
-                  }
-                  alt="QR Code WhatsApp"
-                  className="w-64 h-64"
-                />
+                      {/* Templates List */}
+                      <div className="flex-1 flex flex-col">
+                        <div className="p-3 border-b border-slate-200 flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input
+                              type="text"
+                              placeholder="Buscar templates..."
+                              value={templateSearch}
+                              onChange={(e) =>
+                                setTemplateSearch(e.target.value)
+                              }
+                              className="w-full pl-8 pr-3 py-1.5 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-violet-500/20 outline-none"
+                            />
+                          </div>
+                          <button
+                            onClick={() => setShowFloatingTemplates(false)}
+                            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-2 space-y-1 max-h-70">
+                          {templatesFiltrados.length === 0 ? (
+                            <div className="text-center py-8">
+                              <MessageSquare className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                              <p className="text-sm text-slate-500">
+                                Nenhum template encontrado
+                              </p>
+                            </div>
+                          ) : (
+                            templatesFiltrados.map((template) => {
+                              const CatIcon =
+                                categoriaIcons[template.categoria] ||
+                                MessageSquare;
+                              const categoria = categorias.find(
+                                (c) => c.value === template.categoria
+                              );
+                              return (
+                                <button
+                                  key={template.id}
+                                  onClick={() => handleUsarTemplate(template)}
+                                  className="w-full text-left p-3 rounded-lg hover:bg-violet-50 border border-transparent hover:border-violet-200 transition-all group"
+                                >
+                                  <div className="flex items-start gap-2">
+                                    <CatIcon
+                                      className="w-4 h-4 mt-0.5 shrink-0"
+                                      style={{
+                                        color: categoria?.cor || "#6b7280",
+                                      }}
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="font-medium text-sm text-slate-800 truncate">
+                                          {template.nome}
+                                        </span>
+                                        <Badge
+                                          variant="neutral"
+                                          size="sm"
+                                          className="shrink-0"
+                                        >
+                                          {template.categoria}
+                                        </Badge>
+                                      </div>
+                                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                                        {template.conteudo}
+                                      </p>
+                                    </div>
+                                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-violet-500 shrink-0 mt-0.5" />
+                                  </div>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="flex items-end gap-2 max-w-4xl mx-auto">
+                  <Button
+                    variant="ghost"
+                    className="text-slate-400 hover:text-slate-600 rounded-full w-9 h-9 p-0 shrink-0"
+                  >
+                    <Paperclip className="w-5 h-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className={`rounded-full w-9 h-9 p-0 shrink-0 transition-colors ${
+                      showFloatingTemplates
+                        ? "bg-violet-100 text-violet-600"
+                        : "text-slate-400 hover:text-slate-600"
+                    }`}
+                    onClick={() =>
+                      setShowFloatingTemplates(!showFloatingTemplates)
+                    }
+                    title="Templates (Ctrl+T)"
+                  >
+                    <Zap className="w-5 h-5" />
+                  </Button>
+                  <div className="flex-1 bg-slate-100 rounded-2xl border border-transparent focus-within:border-violet-300 focus-within:ring-2 focus-within:ring-violet-100 transition-all">
+                    <textarea
+                      ref={inputRef}
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Digite uma mensagem..."
+                      className="w-full bg-transparent border-none focus:ring-0 p-2.5 max-h-32 resize-none text-sm text-slate-800 placeholder-slate-400"
+                      rows={1}
+                      style={{ minHeight: "40px" }}
+                    />
+                  </div>
+                  <Button
+                    className="rounded-full w-9 h-9 p-0 bg-violet-600 hover:bg-violet-700 shadow-lg shadow-violet-500/20 shrink-0"
+                    onClick={handleEnviarMensagem}
+                    disabled={!inputText.trim() || enviarMensagem.isPending}
+                  >
+                    {enviarMensagem.isPending ? (
+                      <RefreshCw className="w-4 h-4 text-white animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4 text-white ml-0.5" />
+                    )}
+                  </Button>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">
-                Escaneie o QR Code
-              </h3>
-              <p className="text-sm text-slate-600 mb-4">
-                Abra o WhatsApp no seu celular, vá em Configurações &gt;
-                Dispositivos Conectados &gt; Conectar um dispositivo
-              </p>
-              {qrData.pairingCode && (
-                <div className="bg-slate-100 px-4 py-2 rounded-lg">
-                  <p className="text-xs text-slate-500 mb-1">
-                    Ou use o código de pareamento:
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center p-8 text-center">
+              {!statusConexao?.conectado ? (
+                <div className="max-w-md bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100">
+                  <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <AlertTriangle className="w-8 h-8 text-red-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-800 mb-2">
+                    WhatsApp Desconectado
+                  </h3>
+                  <p className="text-sm text-slate-500 mb-8 leading-relaxed">
+                    Sua instância do WhatsApp não está conectada. Para enviar e
+                    receber mensagens através do CRM, você precisa escanear o QR
+                    Code de conexão.
                   </p>
-                  <p className="text-lg font-mono font-bold text-slate-800">
-                    {qrData.pairingCode}
+                  <Button
+                    variant="primary"
+                    className="w-full"
+                    leftIcon={<Link2 className="w-4 h-4" />}
+                    onClick={() => navigate("/whatsapp")}
+                  >
+                    Ir para Conexão
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                    <MessageSquare className="w-10 h-10 text-slate-300" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-700 mb-2">
+                    Selecione uma conversa
+                  </h3>
+                  <p className="text-sm text-slate-500">
+                    Escolha uma conversa na lista ao lado para começar o
+                    atendimento.
                   </p>
                 </div>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => refetchQR()}
-                className="mt-4"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Atualizar QR Code
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center py-8">
-              <WifiOff className="w-16 h-16 text-slate-300 mb-4" />
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">
-                Não foi possível gerar QR Code
-              </h3>
-              <p className="text-sm text-slate-600 mb-4">
-                {qrData?.mensagem ||
-                  "Verifique se a Evolution API está configurada corretamente."}
-              </p>
-              <Button onClick={() => refetchQR()}>
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Tentar novamente
-              </Button>
             </div>
           )}
         </div>
-
-        <ModalFooter>
-          <Button variant="ghost" onClick={() => setIsQRModalOpen(false)}>
-            Fechar
-          </Button>
-        </ModalFooter>
-      </Modal>
-
-      {/* Modal Configurações */}
-      <Modal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        title="Configurações do WhatsApp"
-        size="sm"
-      >
-        <div className="space-y-4 py-2">
-          {/* Status */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-            <div className="flex items-center gap-3">
-              {isConnected ? (
-                <Wifi className="w-5 h-5 text-emerald-500" />
-              ) : (
-                <WifiOff className="w-5 h-5 text-red-500" />
-              )}
-              <div>
-                <p className="text-sm font-medium text-slate-800">
-                  {isConnected ? "Conectado" : "Desconectado"}
-                </p>
-                {infoData?.numero && (
-                  <p className="text-xs text-slate-500">
-                    {formatPhone(infoData.numero)}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Ações */}
-          <div className="space-y-2">
-            {!isConnected && (
-              <Button
-                className="w-full"
-                leftIcon={<QrCode className="w-4 h-4" />}
-                onClick={() => {
-                  setIsSettingsOpen(false);
-                  setIsQRModalOpen(true);
-                }}
-              >
-                Conectar WhatsApp
-              </Button>
-            )}
-
-            <Button
-              variant="outline"
-              className="w-full"
-              leftIcon={<RotateCcw className="w-4 h-4" />}
-              onClick={handleReiniciar}
-              disabled={reiniciar.isPending}
-            >
-              {reiniciar.isPending ? "Reiniciando..." : "Reiniciar Instância"}
-            </Button>
-
-            {isConnected && (
-              <Button
-                variant="danger"
-                className="w-full"
-                leftIcon={<LogOut className="w-4 h-4" />}
-                onClick={handleDesconectar}
-                disabled={desconectar.isPending}
-              >
-                {desconectar.isPending
-                  ? "Desconectando..."
-                  : "Desconectar WhatsApp"}
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <ModalFooter>
-          <Button variant="ghost" onClick={() => setIsSettingsOpen(false)}>
-            Fechar
-          </Button>
-        </ModalFooter>
-      </Modal>
-
-      {/* Modal de Filtros */}
-      <Modal
-        isOpen={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-        title="Filtrar Conversas"
-        size="sm"
-      >
-        <div className="space-y-3">
-          <p className="text-sm text-slate-600 mb-4">
-            Selecione o status das conversas:
-          </p>
-          {[
-            { value: "todas", label: "Todas", icon: MessageSquare },
-            { value: "aberta", label: "Novas/Abertas", icon: MessageSquare },
-            { value: "em_atendimento", label: "Em atendimento", icon: User },
-            { value: "resolvida", label: "Resolvidas", icon: CheckCircle2 },
-            { value: "arquivada", label: "Arquivadas", icon: Archive },
-          ].map((option) => (
-            <button
-              key={option.value}
-              onClick={() => {
-                setFilterStatus(option.value);
-                setIsFilterModalOpen(false);
-              }}
-              className={`
-                w-full p-3 flex items-center gap-3 rounded-lg border transition-all
-                ${
-                  filterStatus === option.value
-                    ? "bg-violet-50 border-violet-200 text-violet-700"
-                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-                }
-              `}
-            >
-              <option.icon className="w-5 h-5" />
-              <span className="font-medium">{option.label}</span>
-              {filterStatus === option.value && (
-                <CheckCircle2 className="w-5 h-5 ml-auto" />
-              )}
-            </button>
-          ))}
-        </div>
-
-        <ModalFooter>
-          <Button variant="ghost" onClick={() => setIsFilterModalOpen(false)}>
-            Fechar
-          </Button>
-        </ModalFooter>
-      </Modal>
+      </div>
 
       {/* Modal Vincular Cliente */}
       <Modal
-        isOpen={isVincularModalOpen}
-        onClose={() => setIsVincularModalOpen(false)}
+        isOpen={showVincularModal}
+        onClose={() => setShowVincularModal(false)}
         title="Vincular a Cliente"
         size="md"
       >
-        <div className="space-y-3 max-h-96 overflow-y-auto">
-          <p className="text-sm text-slate-600 mb-4">
-            Selecione o cliente para vincular a esta conversa:
-          </p>
-
-          {clientes.length === 0 ? (
-            <p className="text-center text-slate-500 py-4">
-              Nenhum cliente cadastrado
-            </p>
-          ) : (
-            clientes.map((cliente) => (
-              <button
+        <div className="space-y-4">
+          <Input
+            placeholder="Buscar cliente por nome ou CPF..."
+            value={clienteSearch}
+            onChange={(e) => setClienteSearch(e.target.value)}
+            leftIcon={<Search className="w-4 h-4" />}
+          />
+          <div className="max-h-64 overflow-y-auto space-y-2">
+            {clientes.map((cliente) => (
+              <div
                 key={cliente.id}
                 onClick={() => handleVincularCliente(cliente.id)}
-                className="w-full p-3 flex items-center gap-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-all text-left"
+                className="p-3 border border-slate-200 rounded-lg hover:bg-violet-50 hover:border-violet-200 cursor-pointer transition-all"
               >
-                <Avatar name={cliente.nome} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-800 truncate">
-                    {cliente.nome}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {cliente.telefone || cliente.email}
-                  </p>
-                </div>
-              </button>
-            ))
-          )}
+                <p className="font-medium text-slate-800">{cliente.nome}</p>
+                <p className="text-xs text-slate-500">
+                  {cliente.cpf_cnpj} - {cliente.telefone}
+                </p>
+              </div>
+            ))}
+            {clientes.length === 0 && clienteSearch && (
+              <p className="text-center text-sm text-slate-500 py-4">
+                Nenhum cliente encontrado
+              </p>
+            )}
+          </div>
         </div>
-
         <ModalFooter>
-          <Button variant="ghost" onClick={() => setIsVincularModalOpen(false)}>
+          <Button variant="outline" onClick={() => setShowVincularModal(false)}>
             Cancelar
           </Button>
         </ModalFooter>
       </Modal>
-    </PageLayout>
+
+      {/* Modal Templates */}
+      <Modal
+        isOpen={showTemplatesModal}
+        onClose={() => setShowTemplatesModal(false)}
+        title="Gerenciar Templates"
+        size="lg"
+      >
+        <div className="flex gap-4 h-125">
+          {/* Categorias Sidebar */}
+          <div className="w-48 bg-slate-50 rounded-lg p-3 space-y-1 overflow-y-auto">
+            <button
+              onClick={() => setSelectedCategoria("todos")}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+                selectedCategoria === "todos"
+                  ? "bg-violet-100 text-violet-700"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              <Star className="w-4 h-4" />
+              Todos ({templates.length})
+            </button>
+            {categorias.map((cat) => {
+              const Icon = categoriaIcons[cat.value] || MessageSquare;
+              const count =
+                templatesData?.data?.filter((t) => t.categoria === cat.value)
+                  .length || 0;
+              return (
+                <button
+                  key={cat.value}
+                  onClick={() => setSelectedCategoria(cat.value)}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+                    selectedCategoria === cat.value
+                      ? "bg-violet-100 text-violet-700"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" style={{ color: cat.cor }} />
+                  {cat.label}
+                  {count > 0 && (
+                    <span className="ml-auto text-xs text-slate-400">
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Templates List */}
+          <div className="flex-1 overflow-y-auto space-y-2">
+            {/* Search */}
+            <div className="sticky top-0 bg-white pb-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar templates..."
+                  value={templateSearch}
+                  onChange={(e) => setTemplateSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 outline-none"
+                />
+              </div>
+            </div>
+
+            {templatesFiltrados.length === 0 ? (
+              <div className="text-center py-12">
+                <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm text-slate-500">
+                  Nenhum template encontrado
+                </p>
+              </div>
+            ) : (
+              templatesFiltrados.map((template) => {
+                const CatIcon =
+                  categoriaIcons[template.categoria] || MessageSquare;
+                const categoria = categorias.find(
+                  (c) => c.value === template.categoria
+                );
+                return (
+                  <div
+                    key={template.id}
+                    className="p-4 border border-slate-200 rounded-xl hover:bg-violet-50 hover:border-violet-200 transition-all group"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CatIcon
+                            className="w-4 h-4"
+                            style={{ color: categoria?.cor || "#6b7280" }}
+                          />
+                          <h4 className="font-medium text-slate-800">
+                            {template.nome}
+                          </h4>
+                          <Badge variant="neutral" size="sm">
+                            {template.categoria}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-slate-600 whitespace-pre-wrap line-clamp-3">
+                          {template.conteudo}
+                        </p>
+                        {template.uso_count !== undefined &&
+                          template.uso_count > 0 && (
+                            <p className="text-xs text-slate-400 mt-2">
+                              Usado {template.uso_count} vezes
+                            </p>
+                          )}
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => handleUsarTemplate(template)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Copy className="w-4 h-4 mr-1" />
+                        Usar
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Variaveis Info Panel */}
+          <div className="w-56 bg-slate-50 rounded-lg p-3 overflow-y-auto">
+            <h4 className="text-sm font-semibold text-slate-800 mb-3">
+              Variaveis Disponiveis
+            </h4>
+            <div className="space-y-2">
+              {variaveis.map((v) => (
+                <div
+                  key={v.nome}
+                  className="p-2 bg-white rounded-lg border border-slate-200 cursor-pointer hover:bg-violet-50 hover:border-violet-200 transition-colors"
+                  onClick={() => {
+                    setInputText((prev) => prev + v.nome);
+                  }}
+                >
+                  <code className="text-xs text-violet-600 font-medium">
+                    {v.nome}
+                  </code>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    {v.descricao}
+                  </p>
+                  <p className="text-[10px] text-slate-400 italic">
+                    Ex: {v.exemplo}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <ModalFooter>
+          <Button
+            variant="outline"
+            onClick={() => setShowTemplatesModal(false)}
+          >
+            Fechar
+          </Button>
+          <Button onClick={() => setShowTemplatesModal(false)}>
+            Gerenciar Templates
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Modal Metricas */}
+      <Modal
+        isOpen={showMetricas}
+        onClose={() => setShowMetricas(false)}
+        title="Metricas WhatsApp"
+        size="lg"
+      >
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <Card className="text-center">
+            <p className="text-3xl font-bold text-violet-600">
+              {metricas?.totalConversas || 0}
+            </p>
+            <p className="text-sm text-slate-500">Total Conversas</p>
+          </Card>
+          <Card className="text-center">
+            <p className="text-3xl font-bold text-blue-600">
+              {metricas?.conversasAbertas || 0}
+            </p>
+            <p className="text-sm text-slate-500">Abertas</p>
+          </Card>
+          <Card className="text-center">
+            <p className="text-3xl font-bold text-emerald-600">
+              {metricas?.mensagensHoje || 0}
+            </p>
+            <p className="text-sm text-slate-500">Msgs Hoje</p>
+          </Card>
+          <Card className="text-center">
+            <p className="text-3xl font-bold text-amber-600">
+              {metricas?.mensagensSemana || 0}
+            </p>
+            <p className="text-sm text-slate-500">Msgs Semana</p>
+          </Card>
+          <Card className="text-center">
+            <p className="text-3xl font-bold text-pink-600">
+              {metricas?.mensagensMes || 0}
+            </p>
+            <p className="text-sm text-slate-500">Msgs Mes</p>
+          </Card>
+          <Card className="text-center">
+            <p className="text-3xl font-bold text-teal-600">
+              {metricas?.taxaVinculacao || 0}%
+            </p>
+            <p className="text-sm text-slate-500">Clientes Vinculados</p>
+          </Card>
+        </div>
+        <ModalFooter>
+          <Button variant="outline" onClick={() => setShowMetricas(false)}>
+            Fechar
+          </Button>
+        </ModalFooter>
+      </Modal>
+    </div>
   );
 }

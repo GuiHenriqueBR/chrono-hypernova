@@ -12,8 +12,7 @@ export { default as PropostaDetalhes } from "./PropostaDetalhes";
 export { default as Financeiro } from "./Financeiro";
 export { default as Agenda } from "./Agenda";
 export { default as Alertas } from "./Alertas";
-export { default as WhatsApp } from "./WhatsAppPage";
-export { default as WhatsAppCRM } from "./WhatsAppCRM";
+export { default as WhatsApp } from "./WhatsApp";
 export { default as Importacao } from "./Importacao";
 export { default as Configuracoes } from "./Configuracoes";
 // Novos modulos separados

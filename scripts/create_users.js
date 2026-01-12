@@ -3,14 +3,14 @@ const path = require("path");
 const dotenv = require("dotenv");
 
 // Load environment variables from backend .env
-dotenv.config({ path: path.join(__dirname, "../backend/.env") });
+dotenv.config({ path: path.join(__dirname, "../apps/backend/.env") });
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
-  console.log("Path checked:", path.join(__dirname, "../backend/.env"));
+  console.log("Path checked:", path.join(__dirname, "../apps/backend/.env"));
   process.exit(1);
 }
 
@@ -19,7 +19,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const usersToCreate = [
   {
     email: "selma@sefraseguros.com.br",
-    password: "XXX", // Will be replaced in execution
+    password: "XXX", // Provided via env
     nome: "Selma",
     role: "admin",
   },
@@ -43,10 +43,15 @@ async function createUsers() {
   for (const user of usersToCreate) {
     try {
       let userId = "";
-      let password = "";
-      if (user.email.includes("selma")) password = "21031972";
-      if (user.email.includes("financeiro")) password = "13121972";
-      if (user.email.includes("vendas")) password = "23042002";
+      const passwordEnvKey = `PASSWORD_${user.email.split("@")[0].toUpperCase()}`;
+      const password = process.env[passwordEnvKey];
+
+      if (!password) {
+        console.error(
+          `Missing ${passwordEnvKey} env var for ${user.email}. Refusing to create/update user with hardcoded password.`
+        );
+        continue;
+      }
 
       console.log(`Creating/Checking auth for: ${user.email}`);
 
